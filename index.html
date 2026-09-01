@@ -288,6 +288,61 @@ body.kd-locked main>section:not(#kdLogin){display:none!important}
 </style>
 
 
+
+<style id="kd-student-input-layout-v12">
+/* 計算道場：入力中も現在の問題と次の問題を見せる */
+#game .problem-list{
+  max-height:min(360px,44vh);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+#game .problem-card{min-height:66px}
+#game .numkey{position:relative;z-index:3;margin-top:8px}
+#game .numkey button{
+  touch-action:manipulation;
+  -webkit-user-select:none;
+  user-select:none;
+}
+#game .soroban-input[readonly]{caret-color:transparent;cursor:default}
+@media(max-width:700px){
+  #game{padding:10px}
+  #game .topline{
+    position:sticky;top:0;z-index:10;
+    background:#fff;padding-bottom:6px;
+  }
+  #game .problem-list{
+    max-height:25vh;
+    min-height:128px;
+    overflow-y:hidden;
+  }
+  #game .problem-card{
+    grid-template-columns:25px minmax(0,1fr) 116px;
+    min-height:58px;
+    padding:5px 4px;
+  }
+  #game .problem-card .problem{
+    font-size:clamp(19px,5vw,28px);
+    padding:3px;
+  }
+  #game .inline-input input{
+    height:44px;
+    font-size:19px;
+  }
+  #game .numkey{
+    max-width:430px;
+    grid-template-columns:repeat(3,1fr);
+    gap:6px;
+    margin-top:6px;
+  }
+  #game .numkey button{
+    padding:11px 8px;
+    min-height:46px;
+    font-size:20px;
+  }
+  #game .numkey .wide{grid-column:span 2}
+}
+</style>
+
 </head>
 <body>
 
@@ -315,7 +370,7 @@ body.kd-locked main>section:not(#kdLogin){display:none!important}
 <input id="kdClassCode" placeholder="教室コード">
 
 <input id="kdStudentCode" placeholder="生徒ID">
-<input id="kdPin" placeholder="4桁暗証番号" inputmode="numeric" maxlength="4" type="password">
+<input id="kdPin" placeholder="4桁暗証番号" inputmode="numeric" maxlength="4" type="text" autocomplete="off" name="student-pin">
 <button onclick="kdLogin()">ログイン</button>
 </div>
 <div class="small" style="margin:8px 0;color:#666">開発用：サンプル太郎＝0001／1234　・　サンプル次郎＝0002／1234</div>
@@ -923,7 +978,7 @@ function renderProblem(){
   row.className='problem-card '+(i===problemIndex?'current':'');
   let extra=it.hasR?'<span class="remainder-note">商 → Enter → あまり</span>':'';
   const saved=answers[i]?.a??'';
-  row.innerHTML=`<div class="problem-number">${i+1}</div><div class="problem"><span class="soroban-problem">${it.text} =</span></div><div class="inline-input">${extra}<input class="soroban-input" id="ans${i}" inputmode="numeric" autocomplete="off" value="${saved.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" ${i!==problemIndex?'disabled':''}></div>`;
+  row.innerHTML=`<div class="problem-number">${i+1}</div><div class="problem"><span class="soroban-problem">${it.text} =</span></div><div class="inline-input">${extra}<input class="soroban-input" id="ans${i}" inputmode="none" readonly autocomplete="off" value="${saved.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" ${i!==problemIndex?'disabled':''}></div>`;
   wrap.appendChild(row);
  });
  $('problemArea').appendChild(wrap);
@@ -942,7 +997,7 @@ function renderAllMitori(){
   box.className='mitori-box '+(i===problemIndex?'current':'');
   const rows=it.mitori.rows.map(r=>`<div class="mitori-row">${r.sign==='−'?'− ':''}${Number(r.v).toLocaleString('ja-JP')}</div>`).join('');
   const saved=answers[i]?.a??'';
-  box.innerHTML=`<div class="mitori-title">第${i+1}題</div><div class="mitori">${rows}</div><div class="mitori-answer"><input class="soroban-input" id="ans${i}" inputmode="numeric" autocomplete="off" value="${saved.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" ${i!==problemIndex?'disabled':''} placeholder="答え"></div>`;
+  box.innerHTML=`<div class="mitori-title">第${i+1}題</div><div class="mitori">${rows}</div><div class="mitori-answer"><input class="soroban-input" id="ans${i}" inputmode="none" readonly autocomplete="off" value="${saved.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" ${i!==problemIndex?'disabled':''} placeholder="答え"></div>`;
   wrap.appendChild(box);
  });
  $('problemArea').appendChild(wrap);
@@ -2186,6 +2241,28 @@ init();
 </script>
 
 
-<!-- 計算道場 生徒用 GitHub登録版 v1.0 -->
+<!-- 計算道場 生徒用 GitHub登録版 v1.2 -->
+
+<script id="kd-student-physical-keyboard-v12">
+(function(){
+  document.addEventListener('keydown',function(e){
+    const game=document.getElementById('game');
+    if(!game || game.classList.contains('hidden')) return;
+    const tag=(e.target && e.target.tagName)||'';
+    if(['SELECT','BUTTON','TEXTAREA'].includes(tag)) return;
+    if(/^[0-9]$/.test(e.key)){
+      e.preventDefault();
+      if(typeof addKey==='function') addKey(e.key);
+    }else if(e.key==='Backspace'){
+      e.preventDefault();
+      if(typeof back==='function') back();
+    }else if(e.key==='Enter'){
+      e.preventDefault();
+      if(typeof commit==='function') commit();
+    }
+  },true);
+})();
+</script>
+
 </body>
 </html>
