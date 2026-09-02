@@ -639,7 +639,7 @@ body.kd-locked main>section:not(#kdLogin){display:none!important}
 <button class="menu-btn" id="kdRankingOpenBtn" type="button">🥇 オンラインランキングを見る</button>
 
 <div class="kd-menu-group-title">👤 自分の記録</div>
-<button class="menu-btn" id="kdSelfRankingOpenBtn" type="button">📊 自己ランキング TOP10</button>
+<button class="menu-btn" id="kdSelfRankingOpenBtn" type="button">📊 オンライン自己ランキング TOP10</button>
 <button class="menu-btn" id="kdBestOpenBtn" type="button">🏆 自由練習での自己ベスト</button>
 <button class="menu-btn" id="kdChallengeHistoryOpenBtn" type="button">🏆 挑戦履歴</button>
 <button class="menu-btn" id="kdPracticeHistoryOpenBtn" type="button">📋 練習履歴</button>
@@ -722,7 +722,7 @@ body.kd-locked main>section:not(#kdLogin){display:none!important}
 
 
 <section id="kdSelfRanking" class="card hidden">
-  <h2>📊 自己ランキング TOP10</h2>
+  <h2>📊 オンライン自己ランキング TOP10</h2>
   <p class="small">ログイン中の生徒本人の「全問正解した挑戦記録」を、練習内容ごとに速い順でTOP10まで表示します。</p>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
     <select id="kdSelfRankingKind">
@@ -786,8 +786,10 @@ body.kd-locked main>section:not(#kdLogin){display:none!important}
 </div>
 <button onclick="show('home')">メニューへ</button>
 
-<div class="kd-result-actions">
+<div class="kd-result-actions" id="kdResultActions">
   <button class="primary" id="kdResultRankingBtn" type="button">🥇 オンラインランキングを見る</button>
+  <button class="primary" id="kdResultSelfRankingBtn" type="button">📊 オンライン自己ランキング TOP10</button>
+  <button class="primary" id="kdResultBestBtn" type="button">🏆 自由練習での自己ベストを見る</button>
 </div>
 </section>
 
@@ -1455,6 +1457,12 @@ function finish(){
  }
  $('resultTitle').textContent=perfect?'🎉 満点！':'結果';
  $('resultBody').innerHTML=(perfect?`<div class="perfect-result-hero"><div class="perfect-result-circle">〇</div><div class="perfect-result-text">正解！</div><div class="perfect-result-sub">全問正解・満点です！</div></div>`:'')+`<div class="result"><div class="${perfect?'':'result-summary-ng'}">${correct} / ${items.length}問正解</div><br><span class="timer">${time.toFixed(3)}秒</span><br><span class="badge">${perfect?'タイム記録対象':'タイムランキング登録なし'}</span></div><div class="detail">${details.join('')}</div>`;
+ const resultRankingBtn=$('kdResultRankingBtn');
+ const resultSelfBtn=$('kdResultSelfRankingBtn');
+ const resultBestBtn=$('kdResultBestBtn');
+ if(resultRankingBtn) resultRankingBtn.style.display=state.mode==='rank'?'':'none';
+ if(resultSelfBtn) resultSelfBtn.style.display=state.mode==='rank'?'':'none';
+ if(resultBestBtn) resultBestBtn.style.display=state.mode==='free'?'':'none';
  show('result');
 }
 init();
@@ -1907,6 +1915,26 @@ init();
       if(window.kdRenderOnlineRankingV236) window.kdRenderOnlineRankingV236();
       else if(typeof window.kdRenderRankingV224==='function') window.kdRenderRankingV224();
     }
+  });
+})();
+</script>
+
+
+<script id="kd-result-record-links-v252-js">
+(function(){
+  function openSelf(){
+    if(typeof kdCurrentStudent!=='function'||!kdCurrentStudent()){if(typeof kdSetLocked==='function')kdSetLocked(true);return}
+    kdOriginalShow('kdSelfRanking');
+    if(window.kdRenderSelfRankingV229) window.kdRenderSelfRankingV229();
+  }
+  function openBest(){
+    if(typeof kdCurrentStudent!=='function'||!kdCurrentStudent()){if(typeof kdSetLocked==='function')kdSetLocked(true);return}
+    kdOriginalShow('kdBest');
+    if(window.kdRenderBestV218) window.kdRenderBestV218();
+  }
+  document.addEventListener('click',function(e){
+    if(e.target && e.target.id==='kdResultSelfRankingBtn') openSelf();
+    if(e.target && e.target.id==='kdResultBestBtn') openBest();
   });
 })();
 </script>
