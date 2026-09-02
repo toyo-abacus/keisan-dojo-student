@@ -438,6 +438,59 @@ body.kd-locked main>section:not(#kdLogin){display:none!important}
     grid-template-columns: max-content minmax(110px, 1fr);
   }
 }
+<style id="kd-keypad-fixed-v142">
+/* v1.4.2：iPhoneでは仮想テンキーを画面下部に固定し、問題が進んでも位置を変えない */
+@media(max-width:700px){
+  #game{
+    padding-bottom:calc(230px + env(safe-area-inset-bottom)) !important;
+  }
+  #keyboard.numkey{
+    position:fixed !important;
+    left:50% !important;
+    bottom:calc(8px + env(safe-area-inset-bottom)) !important;
+    transform:translateX(-50%) !important;
+    width:min(320px,calc(100vw - 24px)) !important;
+    margin:0 !important;
+    z-index:9990 !important;
+    background:#fff !important;
+    padding:8px !important;
+    border-radius:14px !important;
+    box-shadow:0 4px 20px rgba(0,0,0,.18) !important;
+  }
+  #keyboard.numkey button{
+    touch-action:manipulation !important;
+  }
+}
+</style>
+</style>
+
+<style id="kd-perfect-result-style">
+.perfect-result-hero{
+  text-align:center;
+  margin:0 0 14px;
+  padding:14px 10px 12px;
+  border:3px solid #c00;
+  border-radius:16px;
+  background:#fff;
+}
+.perfect-result-circle{
+  width:76px;height:76px;margin:0 auto 4px;
+  border:6px solid #c00;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  color:#c00;font-size:42px;font-weight:900;line-height:1;
+}
+.perfect-result-text{color:#c00;font-size:30px;font-weight:900;line-height:1.15}
+.perfect-result-sub{font-size:14px;font-weight:800;margin-top:4px}
+.result-summary-ng{font-size:20px;font-weight:900}
+</style>
+
+<style id="problem-correct-hero-style">
+.detail-item{position:relative;}
+.problem-correct-hero{position:absolute;top:-16px;left:50%;z-index:3;display:flex;align-items:center;gap:5px;padding:3px 10px 3px 5px;background:#fff;border:3px solid #d71920;border-radius:999px;box-shadow:0 2px 7px rgba(0,0,0,.14);transform:translateX(-50%) rotate(-1deg);}
+.problem-correct-circle{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border:5px solid #d71920;border-radius:50%;font-size:27px;line-height:1;font-weight:900;color:#d71920;background:#fff;}
+.problem-correct-text{font-size:24px;line-height:1;font-weight:900;color:#d71920;white-space:nowrap;}
+.detail-item.ok{padding-top:25px;}
+@media(max-width:600px){.problem-correct-hero{top:-13px;padding:2px 8px 2px 4px;gap:3px;border-width:2px}.problem-correct-circle{width:32px;height:32px;border-width:4px;font-size:21px}.problem-correct-text{font-size:19px}.detail-item.ok{padding-top:23px}}
 </style>
 </head>
 <body>
@@ -1278,7 +1331,7 @@ function finish(){
     userText=resultAnswerHtml(got,it.answer,it.hasR?`（あまり ${resultNum(gr)}）`:'' ,it.hasR?`（あまり ${resultNum(it.remainder)}）`:'' );
     answerText='';
   }
-  details.push(`<div class="detail-item ${ok?'ok':'ng'}"><div class="result-question"><span class="mark">${ok?'〇':'×'}</span><b>${it.mitori?'見取算':''}</b></div>${questionHtml}${userText}</div>`);
+  details.push(`<div class="detail-item ${ok?'ok':'ng'}">${ok?`<div class="problem-correct-hero"><span class="problem-correct-circle">〇</span><span class="problem-correct-text">正解！</span></div>`:''}<div class="result-question">${ok?'':'<span class="mark">×</span>'}<b>${it.mitori?'見取算':''}</b></div>${questionHtml}${userText}</div>`);
  });
  let perfect=correct===items.length;
  const kdS=kdCurrentStudent();
@@ -1290,7 +1343,7 @@ function finish(){
   }
  }
  $('resultTitle').textContent=perfect?'🎉 満点！':'結果';
- $('resultBody').innerHTML=`<div class="result"><b>${correct} / ${items.length}問正解</b><br><span class="timer">${time.toFixed(3)}秒</span><br><span class="badge">${perfect?'タイム記録対象':'タイムランキング登録なし'}</span></div><div class="detail">${details.join('')}</div>`;
+ $('resultBody').innerHTML=(perfect?`<div class="perfect-result-hero"><div class="perfect-result-circle">〇</div><div class="perfect-result-text">正解！</div><div class="perfect-result-sub">全問正解・満点です！</div></div>`:'')+`<div class="result"><div class="${perfect?'':'result-summary-ng'}">${correct} / ${items.length}問正解</div><br><span class="timer">${time.toFixed(3)}秒</span><br><span class="badge">${perfect?'タイム記録対象':'タイムランキング登録なし'}</span></div><div class="detail">${details.join('')}</div>`;
  show('result');
 }
 init();
