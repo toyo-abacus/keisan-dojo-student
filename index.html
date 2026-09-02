@@ -387,10 +387,20 @@ body.kd-locked main>section:not(#kdLogin){display:none!important}
 
 <style id="kd-problem-viewport-v14">
 @media(max-width:700px){
+  /* スマホでも現在問題＋次の問題が見える高さを確保 */
   #problemArea .problem-list{
-    max-height:34vh;
+    max-height:56vh;
     overflow-y:hidden;
   }
+}
+
+/* iPhoneのダブルタップズームを仮想テンキー上では発生させない */
+#keyboard, #keyboard button{
+  touch-action:manipulation;
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent;
 }
 </style>
 
@@ -1094,8 +1104,12 @@ function renderAllMitori(){
   el.focus();
   let idle;
   const restart=()=>{clearTimeout(idle);idle=setTimeout(()=>{if(document.activeElement===el)el.setSelectionRange(0,0)},2000)};
-  el.addEventListener('input',restart);
+  el.addEventListener('input',()=>{
+    try{el.focus({preventScroll:true});}catch(e){el.focus();}
+    restart();
+  });
   el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();commit()}else restart()});
+  try{el.focus({preventScroll:true});}catch(e){el.focus();}
   restart();
  }
 }
@@ -1106,13 +1120,21 @@ function buildKeyboard(){
  $('keyboard').innerHTML='';
  keys.forEach(k=>{
   const b=document.createElement('button');
+  b.type='button';
   b.textContent=k;
-  b.onclick=()=>k==='⌫'?back():addKey(k);
+  b.addEventListener('pointerdown',e=>{e.preventDefault();},{passive:false});
+  b.onclick=()=>{
+    const el=currentInput();
+    if(el && document.activeElement!==el) el.focus();
+    k==='⌫'?back():addKey(k);
+  };
   $('keyboard').appendChild(b);
  });
  const e=document.createElement('button');
+ e.type='button';
  e.textContent='Enter';
  e.className='wide';
+ e.addEventListener('pointerdown',ev=>{ev.preventDefault();},{passive:false});
  e.onclick=()=>commit();
  $('keyboard').appendChild(e);
 }
