@@ -289,60 +289,146 @@ body.kd-locked main>section:not(#kdLogin){display:none!important}
 
 
 
-<style id="kd-student-input-layout-v12">
-/* 計算道場：入力中も現在の問題と次の問題を見せる */
+
+<style id="kd-student-layout-v13">
+/* 計算道場 v1.3：現在の問題＋次の問題を常に見せ、横スクロールをなくす */
+#game{overflow-x:hidden!important}
 #game .problem-list{
+  overflow-x:hidden!important;
+  overflow-y:hidden!important;
+  scroll-behavior:auto!important;
   max-height:min(360px,44vh);
-  overflow-y:auto;
-  overscroll-behavior:contain;
 }
-#game .problem-card{min-height:66px}
-#game .numkey{position:relative;z-index:3;margin-top:8px}
-#game .numkey button{
-  touch-action:manipulation;
-  -webkit-user-select:none;
-  user-select:none;
+#game .problem-card{overflow:hidden!important;min-width:0!important}
+#game .problem-card .problem{
+  min-width:0!important;max-width:100%!important;
+  overflow:hidden!important;white-space:nowrap!important;
+  text-overflow:clip!important;
+  font-size:clamp(18px,4.8vw,30px);
+  letter-spacing:-.02em;
 }
-#game .soroban-input[readonly]{caret-color:transparent;cursor:default}
 @media(max-width:700px){
-  #game{padding:10px}
-  #game .topline{
-    position:sticky;top:0;z-index:10;
-    background:#fff;padding-bottom:6px;
-  }
-  #game .problem-list{
-    max-height:25vh;
-    min-height:128px;
-    overflow-y:hidden;
-  }
+  #game .problem-list{max-height:28vh;min-height:118px}
   #game .problem-card{
-    grid-template-columns:25px minmax(0,1fr) 116px;
-    min-height:58px;
-    padding:5px 4px;
+    grid-template-columns:25px minmax(0,1fr) 112px!important;
+    min-height:56px!important;padding:4px!important
   }
-  #game .problem-card .problem{
-    font-size:clamp(19px,5vw,28px);
-    padding:3px;
-  }
-  #game .inline-input input{
-    height:44px;
-    font-size:19px;
-  }
-  #game .numkey{
-    max-width:430px;
-    grid-template-columns:repeat(3,1fr);
-    gap:6px;
-    margin-top:6px;
-  }
-  #game .numkey button{
-    padding:11px 8px;
-    min-height:46px;
-    font-size:20px;
-  }
-  #game .numkey .wide{grid-column:span 2}
+  #game .problem-card .problem{font-size:clamp(17px,4.5vw,25px)}
 }
 </style>
 
+
+<style id="kd-keypad-4row-only">
+/* v1.3からの変更は仮想テンキーのレイアウトだけ */
+#keyboard.numkey{
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  grid-auto-flow:row !important;
+}
+#keyboard.numkey .wide{
+  grid-column:span 1 !important;
+}
+</style>
+
+
+<style id="kd-problem-display-v14">
+/* v1.4：問題を横いっぱいに表示し、答え入力欄を問題の下へ */
+#problemArea .problem-list{
+  width:100%;
+  overflow-x:hidden;
+}
+#problemArea .problem-card{
+  grid-template-columns:34px minmax(0,1fr) !important;
+  grid-template-areas:
+    "num problem"
+    ". answer" !important;
+  align-items:center;
+  row-gap:4px !important;
+}
+#problemArea .problem-card .problem-number{
+  grid-area:num;
+}
+#problemArea .problem-card .problem{
+  grid-area:problem;
+  width:100%;
+  min-width:0;
+  overflow:hidden;
+  white-space:nowrap;
+  text-align:center;
+}
+#problemArea .problem-card .inline-input{
+  grid-area:answer;
+  width:min(360px,100%);
+  justify-self:center;
+}
+#problemArea .problem-card .inline-input input{
+  width:100%;
+  box-sizing:border-box;
+  text-align:right;
+}
+@media(max-width:700px){
+  #problemArea .problem-card{
+    grid-template-columns:26px minmax(0,1fr) !important;
+    padding:6px 4px !important;
+  }
+  #problemArea .problem-card .problem{
+    font-size:clamp(20px,6vw,34px);
+    padding:3px 0 !important;
+  }
+  #problemArea .problem-card .inline-input{
+    width:min(300px,100%);
+  }
+}
+/* 見取算は従来レイアウトを維持 */
+#problemArea .mitori-pair .mitori-box{
+  display:block;
+}
+</style>
+
+
+<style id="kd-problem-viewport-v14">
+@media(max-width:700px){
+  #problemArea .problem-list{
+    max-height:34vh;
+    overflow-y:hidden;
+  }
+}
+</style>
+
+
+<style id="kd-visible-caret-and-result-fix">
+/* PCでも見取算の入力カーソルを見えるようにする */
+.soroban-input {
+  caret-color: #111 !important;
+}
+.soroban-input:focus {
+  outline: 2px solid #111 !important;
+  outline-offset: 1px;
+}
+/* 結果画面：ラベルと答えを2列に固定し、数字の右端を揃える */
+.result-answer-grid {
+  display: grid;
+  grid-template-columns: max-content minmax(120px, 1fr);
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: baseline;
+  max-width: 360px;
+  margin-top: 8px;
+}
+.result-answer-label {
+  white-space: nowrap;
+}
+.result-answer-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+@media(max-width:600px){
+  .result-answer-grid {
+    max-width: 100%;
+    grid-template-columns: max-content minmax(110px, 1fr);
+  }
+}
+</style>
 </head>
 <body>
 
@@ -978,7 +1064,7 @@ function renderProblem(){
   row.className='problem-card '+(i===problemIndex?'current':'');
   let extra=it.hasR?'<span class="remainder-note">商 → Enter → あまり</span>':'';
   const saved=answers[i]?.a??'';
-  row.innerHTML=`<div class="problem-number">${i+1}</div><div class="problem"><span class="soroban-problem">${it.text} =</span></div><div class="inline-input">${extra}<input class="soroban-input" id="ans${i}" inputmode="none" readonly autocomplete="off" value="${saved.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" ${i!==problemIndex?'disabled':''}></div>`;
+  row.innerHTML=`<div class="problem-number">${i+1}</div><div class="problem"><span class="soroban-problem">${it.text} =</span></div><div class="inline-input">${extra}<input class="soroban-input" id="ans${i}" inputmode="none" autocomplete="off" value="${saved.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" ${i!==problemIndex?'disabled':''}></div>`;
   wrap.appendChild(row);
  });
  $('problemArea').appendChild(wrap);
@@ -997,11 +1083,11 @@ function renderAllMitori(){
   box.className='mitori-box '+(i===problemIndex?'current':'');
   const rows=it.mitori.rows.map(r=>`<div class="mitori-row">${r.sign==='−'?'− ':''}${Number(r.v).toLocaleString('ja-JP')}</div>`).join('');
   const saved=answers[i]?.a??'';
-  box.innerHTML=`<div class="mitori-title">第${i+1}題</div><div class="mitori">${rows}</div><div class="mitori-answer"><input class="soroban-input" id="ans${i}" inputmode="none" readonly autocomplete="off" value="${saved.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" ${i!==problemIndex?'disabled':''} placeholder="答え"></div>`;
+  box.innerHTML=`<div class="mitori-title">第${i+1}題</div><div class="mitori">${rows}</div><div class="mitori-answer"><input class="soroban-input" id="ans${i}" inputmode="none" autocomplete="off" value="${saved.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" ${i!==problemIndex?'disabled':''} placeholder="答え"></div>`;
   wrap.appendChild(box);
  });
  $('problemArea').appendChild(wrap);
- $('inputArea').innerHTML='<div class="small" style="text-align:center">2秒入力がないと、現在の入力欄の先頭へカーソルを移動します。先頭の0も保持します。Enterで確定。<br>仮想テンキーは数字を末尾に入力します。</div>';
+ $('inputArea').innerHTML='<div class="small" style="text-align:center">2秒入力がないと、現在の入力欄の先頭へカーソルを移動します。先頭の0も保持します。Enterで確定。<br>数字入力はカーソル位置に行います。</div>';
  buildKeyboard();
  const el=$('ans'+problemIndex);
  if(el){
@@ -1039,21 +1125,43 @@ function addKey(k){
  const el=currentInput();
  if(!el)return;
 
- // 仮想テンキーは、通常の答え入力では必ず数字の末尾へ追加。
- // 見取算の2秒カーソル移動仕様があっても、1→9が91になることを防ぐ。
- const s=el.value.length;
- el.value=el.value+k;
- el.setSelectionRange(el.value.length,el.value.length);
+ // 見取算は「入力→2秒停止→先頭へカーソル移動」の分割入力を使う。
+ // そのため、カーソル位置に数字を挿入する。2秒後にカーソルが先頭なら
+ // 次の数字は先頭に追加されるので、右から左へ答えを組み立てられる。
+ if(state.kind==='mitori'){
+  const start=el.selectionStart ?? el.value.length;
+  const end=el.selectionEnd ?? start;
+  el.value=el.value.slice(0,start)+k+el.value.slice(end);
+  const pos=start+k.length;
+  el.setSelectionRange(pos,pos);
+ }else{
+  // かけ算・わり算などは従来どおり末尾へ追加。
+  el.value=el.value+k;
+  el.setSelectionRange(el.value.length,el.value.length);
+ }
  el.dispatchEvent(new Event('input',{bubbles:true}));
 }
 
 function back(){
  const el=currentInput();
  if(!el)return;
- // 仮想テンキーの削除も末尾から行う。
  if(el.value.length>0){
-  el.value=el.value.slice(0,-1);
-  el.setSelectionRange(el.value.length,el.value.length);
+  if(state.kind==='mitori'){
+   // 見取算はカーソル直前の1文字を削除。
+   const start=el.selectionStart ?? el.value.length;
+   const end=el.selectionEnd ?? start;
+   if(start!==end){
+    el.value=el.value.slice(0,start)+el.value.slice(end);
+    el.setSelectionRange(start,start);
+   }else if(start>0){
+    el.value=el.value.slice(0,start-1)+el.value.slice(start);
+    el.setSelectionRange(start-1,start-1);
+   }
+  }else{
+   // かけ算・わり算などは従来どおり末尾から削除。
+   el.value=el.value.slice(0,-1);
+   el.setSelectionRange(el.value.length,el.value.length);
+  }
  }
  el.dispatchEvent(new Event('input',{bubbles:true}));
 }
@@ -1113,6 +1221,20 @@ function quitPractice(){
   closeQuit();
   show('home');
 }
+function resultNum(v){
+  if(v===null || v===undefined || v==='') return '未入力';
+  const raw=String(v).replace(/,/g,'').trim();
+  if(raw==='') return '未入力';
+  const n=Number(raw);
+  return Number.isFinite(n) ? n.toLocaleString('ja-JP') : String(v);
+}
+function resultAnswerHtml(user, correct, userExtra='', correctExtra=''){
+  return `<div class="result-answer-grid">`+
+    `<div class="result-answer-label">あなたの答え</div><div class="result-answer-value"><b>${resultNum(user)}</b>${userExtra}</div>`+
+    `<div class="result-answer-label">正しい答え</div><div class="result-answer-value"><b>${resultNum(correct)}</b>${correctExtra}</div>`+
+    `</div>`;
+}
+
 function finish(){
  clearInterval(timerId);let time=(performance.now()-startAt)/1000;
  let details=[],correct=0;
@@ -1127,14 +1249,14 @@ function finish(){
   if(it.mitori){
     const problemRows=it.mitori.rows.map(r=>`<div class="result-mitori-row">${r.sign==='−'?'− ':''}${Number(r.v).toLocaleString('ja-JP')}</div>`).join('');
     questionHtml=`<div class="result-mitori-problem">${problemRows}</div>`;
-    userText=`あなたの答え：${got}`;
-    answerText=`正しい答え：${it.mitori.answer.toLocaleString('ja-JP')}`;
+    userText=resultAnswerHtml(got,it.mitori.answer);
+    answerText='';
   }else{
     questionHtml=`<div class="result-question-text">${it.text} =</div>`;
-    userText=`あなたの答え：${got}${it.hasR?'（あまり '+gr+'）':''}`;
-    answerText=`正しい答え：${it.answer}${it.hasR?'（あまり '+it.remainder+'）':''}`;
+    userText=resultAnswerHtml(got,it.answer,it.hasR?`（あまり ${resultNum(gr)}）`:'' ,it.hasR?`（あまり ${resultNum(it.remainder)}）`:'' );
+    answerText='';
   }
-  details.push(`<div class="detail-item ${ok?'ok':'ng'}"><div class="result-question"><span class="mark">${ok?'〇':'×'}</span><b>${it.mitori?'見取算':''}</b></div>${questionHtml}<div class="user-answer">${userText}</div>${ok?'':`<div class="correct-answer">${answerText}</div>`}</div>`);
+  details.push(`<div class="detail-item ${ok?'ok':'ng'}"><div class="result-question"><span class="mark">${ok?'〇':'×'}</span><b>${it.mitori?'見取算':''}</b></div>${questionHtml}${userText}</div>`);
  });
  let perfect=correct===items.length;
  const kdS=kdCurrentStudent();
@@ -2241,7 +2363,7 @@ init();
 </script>
 
 
-<!-- 計算道場 生徒用 GitHub登録版 v1.2 -->
+<!-- 計算道場 生徒用 GitHub登録版 v1.3 -->
 
 <script id="kd-student-physical-keyboard-v12">
 (function(){
@@ -2261,6 +2383,54 @@ init();
       if(typeof commit==='function') commit();
     }
   },true);
+})();
+</script>
+
+
+<script id="kd-student-one-row-advance-v13">
+(function(){
+  let lastIndex=-1;
+  function idx(){
+    if(typeof problemIndex==='number')return problemIndex;
+    const cards=[...document.querySelectorAll('#game .problem-card')];
+    return cards.findIndex(x=>x.classList.contains('current'));
+  }
+  function move(){
+    const list=document.querySelector('#game .problem-list'), cards=[...document.querySelectorAll('#game .problem-card')];
+    const i=idx();
+    if(!list||i<0||i===lastIndex)return;
+    lastIndex=i;
+    const c=cards[i];
+    if(c)list.scrollTop=Math.max(0,c.offsetTop-list.offsetTop);
+  }
+  document.addEventListener('click',e=>{
+    if(e.target?.id==='commitBtn'||e.target?.closest?.('#commitBtn'))
+      requestAnimationFrame(()=>requestAnimationFrame(move));
+  });
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Enter')requestAnimationFrame(()=>requestAnimationFrame(move));
+  },true);
+})();
+</script>
+
+
+<script id="kd-student-fit-problems-v13">
+(function(){
+  function fit(){
+    document.querySelectorAll('#game .problem-card .problem').forEach(el=>{
+      const max=Math.min(30,Math.max(17,innerWidth*.048));
+      el.style.fontSize=max+'px';
+      let size=max, available=el.clientWidth;
+      while(size>14&&available>0&&el.scrollWidth>available){
+        size-=1;el.style.fontSize=size+'px';
+      }
+    });
+  }
+  addEventListener('resize',fit);
+  addEventListener('orientationchange',()=>setTimeout(fit,250));
+  const game=document.getElementById('game');
+  if(game)new MutationObserver(()=>requestAnimationFrame(fit)).observe(game,{subtree:true,childList:true});
+  setTimeout(fit,200);
 })();
 </script>
 
