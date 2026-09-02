@@ -96,7 +96,7 @@ button:disabled{opacity:.4}
 .problem-card.current{background:#f8f8f8;border-radius:10px}.problem-card:not(.current) input:disabled{opacity:1;background:#fff;color:#111;-webkit-text-fill-color:#111}
 .problem-number{text-align:center;color:#777;font-weight:800}
 .problem-card .problem{font-size:clamp(24px,4.5vw,42px);padding:5px;text-align:center}
-.inline-input{display:flex;align-items:center;gap:6px}.inline-input input{width:100%;padding:10px;border:1px solid #ccc;border-radius:9px;font-size:24px;text-align:right;height:54px}
+.inline-input{display:flex;align-items:center;gap:6px}.inline-input input{width:100%;padding:10px;border:1px solid #ccc;border-radius:9px;font-size:24px;text-align:right;height:54px}.inline-input input::placeholder{color:#a8a8a8;opacity:1;font-size:16px;font-weight:500}
 .remainder-note{font-size:11px;color:#666}
 .mitori-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px;align-items:start;margin-top:12px}
 .mitori-box{min-width:0}.mitori-title{text-align:center;font-weight:900;font-size:18px;margin-bottom:8px}
@@ -892,7 +892,7 @@ function changeKind(){
 }
 function buildRankLevels(){
  let k=$('rankKind').value,s=$('rankLevel');s.innerHTML='';
- if(k==='mul') for(let i=1;i<=15;i++){let a=i<=5?[2,3,3,4,3][i-1]:i<=10?[4,5,5,6,6][i-6]:[6,7,7,8,8][i-11];let b=i<=5?[1,1,2,2,3][i-1]:i<=10?[3,4,5,5,5][i-6]:[6,6,7,7,8][i-11];s.add(new Option('LV'+i+'　'+a+'桁×'+b+'桁',i))}
+ if(k==='mul') { const map=[[2,1],[3,1],[2,2],[3,2],[3,3],[4,3],[4,4],[5,4],[5,5],[6,5],[6,6],[7,6],[7,7],[8,7],[8,8]]; for(let i=1;i<=15;i++){ const [a,b]=map[i-1]; s.add(new Option('LV'+i+'　'+a+'桁×'+b+'桁',i)); } }
  if(k==='div') for(let i=1;i<=15;i++){let d=i<=5?[1,1,2,2,3][i-1]:i<=10?[3,4,4,5,5][i-6]:[6,6,7,7,8][i-11];let q=i<=5?[2,3,2,3,3][i-1]:i<=10?[4,5,5,6,6][i-6]:[6,7,7,8,8][i-11];s.add(new Option('LV'+i+'　÷'+d+'桁＝'+q+'桁',i))}
  if(k==='mitori') for(let d=2;d<=6;d++)for(let m of [3,5,7,10,12,15,20])s.add(new Option(d+'桁 '+m+'口',d+'-'+m));
 }
@@ -1237,7 +1237,8 @@ function renderProblem(){
   row.className='problem-card '+(i===problemIndex?'current':'next-problem');
   let extra=it.hasR?'<span class="remainder-note">商 → Enter → あまり</span>':'';
   const saved=answers[i]?.a??'';
-  row.innerHTML=`<div class="problem-number">${i+1}</div><div class="problem"><span class="soroban-problem">${it.text} =</span></div><div class="inline-input">${extra}<input class="soroban-input" id="ans${i}" inputmode="none" autocomplete="off" value="${saved.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" ${i!==problemIndex?'disabled':''}></div>`;
+  const answerHint=it.hasR ? (i===problemIndex && remainderMode ? 'あまり' : '答え（商）') : '答え';
+  row.innerHTML=`<div class="problem-number">${i+1}</div><div class="problem"><span class="soroban-problem">${it.text} =</span></div><div class="inline-input">${extra}<input class="soroban-input" id="ans${i}" inputmode="none" autocomplete="off" placeholder="${answerHint}" aria-label="${answerHint}" value="${saved.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" ${i!==problemIndex?'disabled':''}></div>`;
   wrap.appendChild(row);
  });
  $('problemArea').appendChild(wrap);
@@ -1363,7 +1364,7 @@ function commit(){
    answers[problemIndex]={a:el.value,r:''};
    remainderMode=true;
    el.value='';
-   el.placeholder='あまり';
+   el.placeholder='あまり'; el.setAttribute('aria-label','あまり');
    el.setSelectionRange(0,0);
    el.focus();
    return;
