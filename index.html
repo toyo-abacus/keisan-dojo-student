@@ -508,6 +508,92 @@ body.kd-locked main>section:not(#kdLogin){display:none!important}
 .detail-item.ok{padding-top:25px;}
 @media(max-width:600px){.problem-correct-hero{top:-13px;padding:2px 8px 2px 4px;gap:3px;border-width:2px}.problem-correct-circle{width:32px;height:32px;border-width:4px;font-size:21px}.problem-correct-text{font-size:19px}.detail-item.ok{padding-top:23px}}
 </style>
+
+<style id="kd-responsive-input-v150">
+/* v1.5.0：端末共通の入力画面。常に「現在＋次」の2題だけを表示 */
+#game{
+  overflow:hidden !important;
+}
+#problemArea{
+  width:100%;
+  overflow:visible !important;
+}
+#problemArea .problem-list{
+  display:grid !important;
+  grid-template-rows:auto auto !important;
+  gap:10px !important;
+  max-height:none !important;
+  min-height:0 !important;
+  overflow:visible !important;
+  margin:8px 0 0 !important;
+}
+#problemArea .problem-card{
+  width:100% !important;
+  min-height:0 !important;
+  padding:10px 8px !important;
+}
+#problemArea .problem-card.next-problem{
+  opacity:.88;
+  background:#fff !important;
+}
+#problemArea .problem-card.current{
+  background:#f8f8f8 !important;
+}
+#problemArea .problem-card .problem{
+  min-width:0 !important;
+  width:100% !important;
+  overflow:hidden !important;
+  text-overflow:clip !important;
+  white-space:nowrap !important;
+}
+/* 入力欄は現在問題だけ。次問題は問題だけ見せる */
+#problemArea .next-problem .inline-input{
+  visibility:hidden !important;
+  min-height:0 !important;
+}
+/* 画面が極端に低い端末では2題をさらにコンパクトに */
+@media (max-height:700px){
+  #problemArea .problem-list{gap:5px !important;}
+  #problemArea .problem-card{padding:5px 4px !important;}
+  #problemArea .problem-card .problem{padding:2px 0 !important;}
+  #problemArea .problem-card .inline-input input{height:46px !important;}
+}
+/* タブレット以上では2題を読みやすく表示 */
+@media (min-width:701px){
+  #problemArea .problem-list{gap:14px !important;}
+  #problemArea .problem-card{padding:12px 10px !important;}
+}
+/* 仮想テンキーは入力位置を変えない。画面下に固定し、問題領域に十分な余白を確保 */
+@media (max-width:1100px){
+  #game{padding-bottom:calc(300px + env(safe-area-inset-bottom)) !important;}
+  #keyboard.numkey{
+    position:fixed !important;
+    left:50% !important;
+    bottom:calc(18px + env(safe-area-inset-bottom)) !important;
+    transform:translateX(-50%) !important;
+    width:min(420px,calc(100vw - 24px)) !important;
+    margin:0 !important;
+    z-index:9990 !important;
+    background:#fff !important;
+    padding:8px !important;
+    border-radius:14px !important;
+    box-shadow:0 4px 20px rgba(0,0,0,.18) !important;
+  }
+  #keyboard.numkey button{
+    touch-action:manipulation !important;
+    min-height:54px !important;
+  }
+}
+@media (max-width:700px){
+  #game{padding-bottom:calc(292px + env(safe-area-inset-bottom)) !important;}
+  #keyboard.numkey{
+    width:min(360px,calc(100vw - 20px)) !important;
+    padding:6px !important;
+    gap:6px !important;
+  }
+  #keyboard.numkey button{min-height:50px !important;height:50px !important;padding:4px !important;}
+}
+</style>
 </head>
 <body>
 
@@ -1138,9 +1224,15 @@ function renderProblem(){
  }
  const wrap=document.createElement('div');
  wrap.className='problem-list';
- items.forEach((it,i)=>{
+ // 入力画面は「現在の問題＋次の問題」だけを表示する。
+ // 過去の問題を画面から外すことで、iPhone・iPad・Android・PCを問わず
+ // 次の問題がテンキーに隠れたり、手動スクロールが必要になったりしない。
+ const visibleIndexes=[problemIndex];
+ if(problemIndex<items.length-1) visibleIndexes.push(problemIndex+1);
+ visibleIndexes.forEach(i=>{
+  const it=items[i];
   const row=document.createElement('div');
-  row.className='problem-card '+(i===problemIndex?'current':'');
+  row.className='problem-card '+(i===problemIndex?'current':'next-problem');
   let extra=it.hasR?'<span class="remainder-note">商 → Enter → あまり</span>':'';
   const saved=answers[i]?.a??'';
   row.innerHTML=`<div class="problem-number">${i+1}</div><div class="problem"><span class="soroban-problem">${it.text} =</span></div><div class="inline-input">${extra}<input class="soroban-input" id="ans${i}" inputmode="none" autocomplete="off" value="${saved.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" ${i!==problemIndex?'disabled':''}></div>`;
@@ -1185,7 +1277,7 @@ function renderAllMitori(){
 let remainderMode=false;
 
 function buildKeyboard(){
- const keys=['1','2','3','4','5','6','7','8','9','0','⌫'];
+ const keys=['1','2','3','4','5','6','7','8','9','⌫','0'];
  $('keyboard').innerHTML='';
  keys.forEach(k=>{
   const b=document.createElement('button');
@@ -1286,9 +1378,12 @@ function commit(){
   problemIndex++;
   renderProblem();
   requestAnimationFrame(()=>{
-    const area=$('problemArea');
-    if(area) area.scrollIntoView({behavior:'auto',block:'start'});
-    window.scrollTo({top:0,behavior:'auto'});
+    // renderProblem() が現在＋次の2題だけを描画するため、
+    // ここではページ全体をスクロールさせない。入力欄へフォーカスするだけにする。
+    const el2=$('ans'+problemIndex);
+    if(el2){
+      try{el2.focus({preventScroll:true});}catch(e){el2.focus();}
+    }
   });
  }else{
   finish();
@@ -2487,12 +2582,8 @@ init();
     return cards.findIndex(x=>x.classList.contains('current'));
   }
   function move(){
-    const list=document.querySelector('#game .problem-list'), cards=[...document.querySelectorAll('#game .problem-card')];
-    const i=idx();
-    if(!list||i<0||i===lastIndex)return;
-    lastIndex=i;
-    const c=cards[i];
-    if(c)list.scrollTop=Math.max(0,c.offsetTop-list.offsetTop);
+    // v1.5.0では現在＋次の2題だけを描画するため、スクロールは不要。
+    return;
   }
   document.addEventListener('click',e=>{
     if(e.target?.id==='commitBtn'||e.target?.closest?.('#commitBtn'))
