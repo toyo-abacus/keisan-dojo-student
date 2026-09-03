@@ -749,27 +749,30 @@ body.kd-locked main>section:not(#kdLogin){display:none!important}
 <section id="kdRanking" class="card hidden">
   <h2>🥇 ランキング</h2>
   <p class="small">現在はこの端末に保存されている「挑戦」の全問正解記録で試作しています。クラウド化した際も同じ順位ルールを使います。</p>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
-    <select id="kdRankingKind">
-      <option value="mul">かけ算</option>
-      <option value="div">わり算</option>
-      <option value="mitori">見取算</option>
-    </select>
-  </div>
   <div class="kd-rank-note">オンラインランキングでは、TOP10入りしていなくてもログイン中のあなたの順位を確認できます。上位レベルでTOP10入りしている場合は、下位レベルでは非表示となります。</div>
 <div class="kd-online-tabs" role="tablist">
   <button type="button" class="kd-online-tab active" data-kd-rank-mode="time">🏆 タイム</button>
-  <button type="button" class="kd-online-tab" data-kd-rank-mode="correct">🎯 正解数</button>
+  <button type="button" class="kd-online-tab" data-kd-rank-mode="correct">🎯 正答数</button>
   <button type="button" class="kd-online-tab" data-kd-rank-mode="grade">🎓 学年</button>
   <button type="button" class="kd-online-tab" data-kd-rank-mode="streak">🔥 継続練習</button>
   <button type="button" class="kd-online-tab" data-kd-rank-mode="practiceDays">📅 練習日数</button>
 </div>
+<div id="kdRankKindTime" style="margin:10px 0">
+  <label for="kdRankingKindTime" style="font-weight:800">種目</label>
+  <select id="kdRankingKindTime" style="margin-left:8px;max-width:220px"><option value="mul">かけ算</option><option value="div">わり算</option><option value="mitori">見取算</option></select>
+</div>
+<div id="kdRankKindGrade" style="display:none;margin:10px 0">
+  <label for="kdRankingKindGrade" style="font-weight:800">種目</label>
+  <select id="kdRankingKindGrade" style="margin-left:8px;max-width:220px"><option value="mul">かけ算</option><option value="div">わり算</option><option value="mitori">見取算</option></select>
+</div>
 <div class="kd-online-subnote" id="kdOnlineRankDescription">全問正解した挑戦のタイムを、レベル別に表示します。</div>
-<div id="kdOnlinePeriodWrap" class="kd-online-period-wrap" style="display:none;margin:10px 0">
-  <label for="kdOnlinePeriod" style="font-weight:800">集計期間</label>
-  <select id="kdOnlinePeriod" style="margin-left:8px;max-width:220px">
-    <option value="today">今日</option><option value="yesterday">昨日</option><option value="thisWeek">今週</option><option value="lastWeek">先週</option><option value="thisMonth">今月</option><option value="lastMonth">先月</option><option value="all">過去全て</option>
-  </select>
+<div id="kdOnlinePeriodWrap" class="kd-online-period-wrap" style="margin:10px 0">
+  <label style="font-weight:800">集計期間</label>
+  <div id="kdPeriodTime" style="margin-top:6px"><select id="kdOnlinePeriodTime" style="max-width:220px"><option value="thisMonth">今月</option><option value="lastMonth">先月</option><option value="all">過去全て</option></select></div>
+  <div id="kdPeriodCorrect" style="display:none;margin-top:6px"><select id="kdOnlinePeriodCorrect" style="max-width:220px"><option value="today">今日</option><option value="yesterday">昨日</option><option value="thisWeek">今週</option><option value="lastWeek">先週</option><option value="thisMonth">今月</option><option value="lastMonth">先月</option><option value="all">過去全て</option></select></div>
+  <div id="kdPeriodGrade" style="display:none;margin-top:6px"><select id="kdOnlinePeriodGrade" style="max-width:220px"><option value="thisYear">今年度</option><option value="lastYear">前年度</option><option value="all">過去全て</option></select></div>
+  <div id="kdPeriodStreak" style="display:none;margin-top:6px"><select id="kdOnlinePeriodStreak" style="max-width:220px"><option value="all">過去全て</option></select></div>
+  <div id="kdPeriodPracticeDays" style="display:none;margin-top:6px"><select id="kdOnlinePeriodPracticeDays" style="max-width:220px"><option value="thisWeek">今週</option><option value="lastWeek">先週</option><option value="thisMonth">今月</option><option value="lastMonth">先月</option><option value="all">過去全て</option></select></div>
 </div>
 <div id="kdYourCurrentPosition" class="kd-your-position">
   <div class="kd-your-position-title">👤 あなたの現在地</div>
@@ -912,7 +915,7 @@ function kdLogout(){localStorage.removeItem(KD_SESSION);document.getElementById(
 function opts(id,max,min=1){let s=$(id);s.innerHTML='';for(let i=min;i<=max;i++)s.add(new Option(i+'桁',i));}
 function init(){
  opts('mulA',8);opts('mulB',8);opts('divD',8);opts('divQ',8);
- opts('minDigit',7);opts('maxDigit',7);
+ opts('minDigit',10);opts('maxDigit',10);
  let m=$('mouths');for(let i=1;i<=30;i++)m.add(new Option(i+'口',i));m.value=10;
  buildRankLevels();
 }
@@ -1930,7 +1933,7 @@ init();
     if(e.target && e.target.id==='kdRankingBackBtn') kdOriginalShow('home');
   });
   document.addEventListener('change',function(e){
-    if(e.target && e.target.id==='kdRankingKind') render();
+    if(e.target && (e.target.id==='kdRankingKindTime'||e.target.id==='kdRankingKindGrade')) render();
   });
   window.kdRenderRankingV224=render;
 })();
@@ -2099,6 +2102,7 @@ init();
 (function(){
   const HIST='kdHistoryV28', SESSION='kdSessionV28';
   let mode='time';
+  window.kdSetOnlineRankingMode=function(next){ mode=next||'time'; render(); };
 
   function sess(){return kdRead(SESSION,null)}
   function all(){return kdRead(HIST,[])}
@@ -2145,12 +2149,12 @@ init();
   // Difficulty within one digit department:
   // larger mouth count is harder. A range such as 3桁～5桁 is
   // treated as belonging to the corresponding mixed-digit department.
-  function renderMitoriTime(){
+  function renderMitoriTime(period){
     const body=document.getElementById('kdRankingBody'); if(!body)return;
     const sid=sess()?.studentId;
     const groups=new Map();
 
-    perfectRows().filter(r=>r.kind==='mitori').forEach(r=>{
+    filterByPeriod(perfectRows().filter(r=>r.kind==='mitori'),period).forEach(r=>{
       const dg=mitoriDigitRange(r); if(!dg)return;
       // Single-digit department: 2桁部, 3桁部 ... 6桁部.
       // Mixed ranges are grouped under their maximum digit department
@@ -2232,17 +2236,17 @@ init();
     }).join('');
   }
 
-  function renderTime(kind){
+  function renderTime(kind,period){
     const body=document.getElementById('kdRankingBody'); if(!body)return;
     const sid=sess()?.studentId;
 
     if(kind==='mitori'){
-      renderMitoriTime();
+      renderMitoriTime(period);
       return;
     }
 
     // One person = one entry per LV: use that student's fastest perfect time.
-    const raw=perfectRows().filter(r=>r.kind===kind);
+    const raw=filterByPeriod(perfectRows().filter(r=>r.kind===kind),period);
     const byLevelStudent=new Map();
     raw.forEach(r=>{
       const lv=levelNum(r);
@@ -2320,10 +2324,10 @@ init();
     }).join('');
   }
 
-  function renderCorrect(){
+  function renderCorrect(period){
     const body=document.getElementById('kdRankingBody'); if(!body)return;
     const map=new Map();
-    challenges().forEach(r=>{
+    filterByPeriod(all().filter(r=>r.studentId),period).forEach(r=>{
       const id=String(r.studentId);
       if(!map.has(id))map.set(id,{studentId:id,name:name(r),classroomName:r.classroomName||r.className||'—',count:0});
       map.get(id).count+=Number(r.correctCount)||0;
@@ -2339,24 +2343,19 @@ init();
     body.innerHTML=rows.length?html:'<div class="kd-rank-note">まだオンラインランキングの挑戦記録がありません。</div>';
   }
 
-  function renderGrade(){
+  function renderGrade(kind,period){
     const body=document.getElementById('kdRankingBody'); if(!body)return;
-    const best=new Map();
-    perfectRows().forEach(r=>{
-      const grade=Number(r.grade??r.schoolGrade??r.studentGrade);
-      if(!Number.isFinite(grade))return;
-      const id=String(r.studentId), lv=levelNum(r), old=best.get(id);
-      if(!old||lv>old.lv||(lv===old.lv&&time(r)<time(old)))best.set(id,{...r,grade,lv});
-    });
-    const groups=new Map();
-    Array.from(best.values()).forEach(r=>{if(!groups.has(r.grade))groups.set(r.grade,[]);groups.get(r.grade).push(r)});
-    body.innerHTML=Array.from(groups.entries()).sort((a,b)=>a[0]-b[0]).map(([g,rs])=>{
-      rs.sort((a,b)=>b.lv-a.lv||time(a)-time(b)||String(a.recordedAt).localeCompare(String(b.recordedAt)));
-      return `<div class="kd-grade-rank-note"><b>🎓 ${g}年生</b><br>高いLVで全問正解してタイムを残した人を上位にし、同じLVならタイムの速い順です。</div>`+
-      `<div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>教室</th><th>LV</th><th>タイム</th></tr></thead><tbody>`+
-      rs.slice(0,10).map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(name(r))}</td><td>LV${r.lv}</td><td>${time(r).toFixed(3)}秒</td></tr>`).join('')+
-      `</tbody></table></div>`;
-    }).join('')||'<div class="kd-rank-note">学年情報のある全問正解記録がまだありません。</div>';
+    const source=filterByAcademicYear(perfectRows().filter(r=>r.kind===kind),period);
+    if(kind==='mitori'){
+      const best=new Map();
+      source.forEach(r=>{const grade=Number(r.grade??r.schoolGrade??r.studentGrade);const dg=mitoriDigitRange(r);if(!Number.isFinite(grade)||!dg)return;const id=String(r.studentId),score=(dg.max||0)*100+mitoriMouths(r),old=best.get(id);if(!old||score>old.score||(score===old.score&&time(r)<time(old)))best.set(id,{...r,grade,score});});
+      const groups=new Map();Array.from(best.values()).forEach(r=>{if(!groups.has(r.grade))groups.set(r.grade,[]);groups.get(r.grade).push(r);});
+      body.innerHTML=Array.from(groups.entries()).sort((a,b)=>a[0]-b[0]).map(([g,rs])=>{rs.sort((a,b)=>b.score-a.score||time(a)-time(b));return `<div class="kd-grade-rank-note"><b>🎓 ${g}年生</b><br>記録達成時の学年で集計します。</div><div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>条件</th><th>タイム</th></tr></thead><tbody>${rs.slice(0,10).map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(name(r))}</td><td>${esc(mitoriDetailLabel(r))}</td><td>${time(r).toFixed(3)}秒</td></tr>`).join('')}</tbody></table></div>`;}).join('')||'<div class="kd-rank-note">この期間・種目の学年ランキング記録がありません。</div>';
+      return;
+    }
+    const best=new Map();source.forEach(r=>{const grade=Number(r.grade??r.schoolGrade??r.studentGrade);if(!Number.isFinite(grade))return;const id=String(r.studentId),lv=levelNum(r),old=best.get(id);if(!old||lv>old.lv||(lv===old.lv&&time(r)<time(old)))best.set(id,{...r,grade,lv});});
+    const groups=new Map();Array.from(best.values()).forEach(r=>{if(!groups.has(r.grade))groups.set(r.grade,[]);groups.get(r.grade).push(r);});
+    body.innerHTML=Array.from(groups.entries()).sort((a,b)=>a[0]-b[0]).map(([g,rs])=>{rs.sort((a,b)=>b.lv-a.lv||time(a)-time(b));return `<div class="kd-grade-rank-note"><b>🎓 ${g}年生</b><br>記録達成時の学年で集計。年度が替わっても過去の記録の学年は変わりません。</div><div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>LV</th><th>タイム</th></tr></thead><tbody>${rs.slice(0,10).map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(name(r))}</td><td>LV${r.lv}</td><td>${time(r).toFixed(3)}秒</td></tr>`).join('')}</tbody></table></div>`;}).join('')||'<div class="kd-rank-note">この期間・種目の学年ランキング記録がありません。</div>';
   }
 
   function periodRange(period){
@@ -2391,9 +2390,14 @@ init();
     }
     return best;
   }
+  function recordDate(r){ const d=new Date(r.recordedAt||0); return Number.isNaN(d.getTime())?null:d; }
+  function filterByPeriod(rows, period){ if(period==='all')return rows; const range=periodRange(period); return rows.filter(r=>{const d=recordDate(r);return d&&d>=range.start&&d<=range.end;}); }
+  function academicYearOf(date){ const d=date instanceof Date?date:new Date(date); return d.getMonth()>=3?d.getFullYear():d.getFullYear()-1; }
+  function filterByAcademicYear(rows, period){ if(period==='all')return rows; const target=academicYearOf(new Date())+(period==='lastYear'?-1:0); return rows.filter(r=>{const d=recordDate(r);return d&&academicYearOf(d)===target;}); }
+
   function renderPracticeRank(mode){
     const body=document.getElementById('kdRankingBody'); if(!body)return;
-    const period=document.getElementById('kdOnlinePeriod')?.value||'today'; const range=periodRange(period), map=new Map();
+    const period=(mode==='streak'?'all':(document.getElementById(mode==='practiceDays'?'kdOnlinePeriodPracticeDays':'kdOnlinePeriodStreak')?.value||'all')); const range=periodRange(period), map=new Map();
     const days=qualifiedDayMap();
     const ids=new Set([...days.keys()]);
     ids.forEach(id=>{const rows=all().filter(r=>String(r.studentId)===id);const sample=rows[0]||{};const ds=days.get(id)||[];const count=ds.filter(d=>inPeriod(d+'T00:00:00',range)).length;const streak=streakForDates(ds,period);map.set(id,{studentId:id,name:name(sample),classroomName:sample.classroomName||sample.className||'—',count,streak});});
@@ -2409,36 +2413,48 @@ init();
     body.innerHTML=rows.length?html:'<div class="kd-rank-note">この期間の練習記録がまだありません。</div>';
   }
 
+  function updatePeriodUI(){
+    ['kdPeriodTime','kdPeriodCorrect','kdPeriodGrade','kdPeriodStreak','kdPeriodPracticeDays'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+    const kt=document.getElementById('kdRankKindTime'),kg=document.getElementById('kdRankKindGrade');if(kt)kt.style.display=mode==='time'?'block':'none';if(kg)kg.style.display=mode==='grade'?'block':'none';
+    const map={time:'kdPeriodTime',correct:'kdPeriodCorrect',grade:'kdPeriodGrade',streak:'kdPeriodStreak',practiceDays:'kdPeriodPracticeDays'};const e=document.getElementById(map[mode]);if(e)e.style.display='block';
+  }
+  function selectedPeriod(){const map={time:'kdOnlinePeriodTime',correct:'kdOnlinePeriodCorrect',grade:'kdOnlinePeriodGrade',streak:'kdOnlinePeriodStreak',practiceDays:'kdOnlinePeriodPracticeDays'};return document.getElementById(map[mode])?.value||'all';}
   function render(){
-    const d=document.getElementById('kdOnlineRankDescription');
-    if(mode==='time'){
-      if(d)d.textContent='かけ算・わり算はLV別。上位LVでTOP10入りした生徒は下位LVでは非表示にします。見取算は2桁～6桁の部門別・出題方式別に同じ考え方で表示します。';
-      const kind=document.getElementById('kdRankingKind')?.value||'mul';
-      renderTime(kind);
-    }else if(mode==='correct'){
-      if(d)d.textContent='すべてのオンラインランキング挑戦で獲得した正解数の合計です。';
-      renderCorrect();
-    }else if(mode==='grade'){
-      if(d)d.textContent='学年ごとに、高いLVで全問正解してタイムを残した人を上位にします。同じLVならタイムの速い順です。';
-      renderGrade();
-    }else{
-      const wrap=document.getElementById('kdOnlinePeriodWrap'); if(wrap)wrap.style.display='block';
-      if(d)d.textContent=mode==='streak'?'一日の正答数が10題以上で「練習日」になります。その期間内の連続練習日数をランキングします。':'一日の正答数が10題以上で「練習日」になります。その期間の練習日数をランキングします。';
-      renderPracticeRank(mode);
-    }
-    if(mode==='time'||mode==='correct'||mode==='grade'){const wrap=document.getElementById('kdOnlinePeriodWrap');if(wrap)wrap.style.display='none';}
+    const d=document.getElementById('kdOnlineRankDescription');updatePeriodUI();
+    if(mode==='time'){if(d)d.textContent='今月・先月・過去全て。';renderTime(document.getElementById('kdRankingKindTime')?.value||'mul',selectedPeriod());}
+    else if(mode==='correct'){if(d)d.textContent='自由練習＋オンラインランキング挑戦の正答数を合算します。';renderCorrect(selectedPeriod());}
+    else if(mode==='grade'){if(d)d.textContent='記録達成時の学年で集計し、年度が替わっても過去の記録は変わりません。';renderGrade(document.getElementById('kdRankingKindGrade')?.value||'mul',selectedPeriod());}
+    else {if(d)d.textContent=mode==='streak'?'過去全ての継続練習ランキングです。':'一日の正答数が10題以上で「練習日」になります。その期間の練習日数をランキングします。';renderPracticeRank(mode);}
   }
 
-  document.addEventListener('change',function(e){if(e.target&&e.target.id==='kdOnlinePeriod')render();});
+  document.addEventListener('change',function(e){if(e.target&&['kdOnlinePeriodTime','kdOnlinePeriodCorrect','kdOnlinePeriodGrade','kdOnlinePeriodStreak','kdOnlinePeriodPracticeDays','kdRankingKindTime','kdRankingKindGrade'].includes(e.target.id))render();});
+  window.kdRenderOnlineRankingV236=render;
+})();
+</script>
+
+<script id="kd-ranking-tab-fix-v251">
+(function(){
   document.addEventListener('click',function(e){
     const b=e.target?.closest?.('[data-kd-rank-mode]');
     if(!b)return;
     document.querySelectorAll('[data-kd-rank-mode]').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active'); mode=b.dataset.kdRankMode; render();
+    b.classList.add('active');
+    if(window.kdSetOnlineRankingMode) window.kdSetOnlineRankingMode(b.dataset.kdRankMode);
+    else if(window.kdRenderOnlineRankingV236){
+      // v1.5.11 の既存レンダラーは内部modeを閉じ込めているため、
+      // 互換用にクリック対象のmodeを反映するイベントを発火します。
+      const mode=b.dataset.kdRankMode;
+      window.dispatchEvent(new CustomEvent('kd-ranking-mode-change',{detail:{mode}}));
+    }
   });
-  window.kdRenderOnlineRankingV236=render;
+  window.addEventListener('kd-ranking-mode-change',function(e){
+    // 既存v236の内部modeへアクセスできないため、UI側で再描画可能な
+    // 最新レンダラーを差し替えている場合のみ利用します。
+    if(window.kdRenderOnlineRankingByMode) window.kdRenderOnlineRankingByMode(e.detail.mode);
+  });
 })();
 </script>
+
 
 
 <script id="kd-ranking-kind-refresh-v237">
@@ -2469,7 +2485,7 @@ init();
 <script id="kd-online-ranking-authoritative-v239">
 (function(){
   document.addEventListener('change',function(e){
-    if(e.target && e.target.id==='kdRankingKind'){
+    if(e.target && (e.target.id==='kdRankingKindTime'||e.target.id==='kdRankingKindGrade')){
       setTimeout(function(){
         if(window.kdRenderOnlineRankingV236) window.kdRenderOnlineRankingV236();
       },0);
@@ -2497,15 +2513,20 @@ init();
   function detail(r){return r.practiceDetail||r.levelLabel||'—'}
   function esc(v){return String(v??'').replace(/[&<>"']/g,'')}
 
+  function periodRangeForPosition(period){const now=new Date(),d0=new Date(now.getFullYear(),now.getMonth(),now.getDate());if(period==='all')return {start:null,end:null};if(period==='today')return {start:d0,end:new Date(d0.getTime()+86400000-1)};if(period==='yesterday')return {start:new Date(d0.getTime()-86400000),end:new Date(d0.getTime()-1)};const dow=d0.getDay(),off=(dow+6)%7;if(period==='thisWeek'){const st=new Date(d0.getTime()-off*86400000);return {start:st,end:new Date(st.getTime()+7*86400000-1)}}if(period==='lastWeek'){const en=new Date(d0.getTime()-off*86400000-1);return {start:new Date(en.getTime()-6*86400000),end:en}}if(period==='thisMonth')return {start:new Date(now.getFullYear(),now.getMonth(),1),end:new Date(now.getFullYear(),now.getMonth()+1,1)-1};if(period==='lastMonth')return {start:new Date(now.getFullYear(),now.getMonth()-1,1),end:new Date(now.getFullYear(),now.getMonth(),1)-1};return {start:null,end:null};}
+
   function show(){
     const body=document.getElementById('kdYourCurrentPositionBody');
     if(!body)return;
     const s=sess();
     if(!s){body.innerHTML='<span class="sub">ログインすると表示されます。</span>';return}
 
-    const kind=document.getElementById('kdRankingKind')?.value||'mul';
     const mode=document.querySelector('.kd-online-tab.active')?.dataset?.kdRankMode||'time';
-    const rows=all().filter(r=>r.mode==='rank'&&r.studentId);
+    const kind=document.getElementById(mode==='grade'?'kdRankingKindGrade':'kdRankingKindTime')?.value||'mul';
+    const periodIds={time:'kdOnlinePeriodTime',correct:'kdOnlinePeriodCorrect',grade:'kdOnlinePeriodGrade'};
+    const period=mode==='streak'||mode==='practiceDays'?'all':(document.getElementById(periodIds[mode])?.value||'all');
+    const range=periodRangeForPosition(period);
+    const rows=all().filter(r=>r.mode==='rank'&&r.studentId).filter(r=>{if(!range.start)return true;const d=new Date(r.recordedAt||0);return d>=range.start&&d<=range.end;});
 
     if(mode==='correct'){
       const map=new Map();
@@ -2638,11 +2659,10 @@ init();
 
     body.innerHTML=departments.join('');
 
-    body.innerHTML=`<b>${d.max}桁の部</b>　｜　<b>${detail(mine)}</b>　｜　${i>=0?`現在 <b>${i+1}位</b>　｜　${time(mine).toFixed(3)}秒`:'ランキング非表示'} `;
   }
 
   document.addEventListener('change',function(e){
-    if(e.target?.id==='kdRankingKind' && window.kdRenderYourCurrentPositionV244) setTimeout(window.kdRenderYourCurrentPositionV244,0);
+    if((e.target?.id==='kdRankingKindTime'||e.target?.id==='kdRankingKindGrade'||e.target?.id==='kdOnlinePeriodTime'||e.target?.id==='kdOnlinePeriodCorrect'||e.target?.id==='kdOnlinePeriodGrade') && window.kdRenderYourCurrentPositionV244) setTimeout(window.kdRenderYourCurrentPositionV244,0);
   });
   document.addEventListener('click',function(e){
     if(e.target?.closest?.('[data-kd-rank-mode]') && window.kdRenderYourCurrentPositionV244) setTimeout(window.kdRenderYourCurrentPositionV244,0);
