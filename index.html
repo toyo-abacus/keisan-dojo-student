@@ -1536,7 +1536,7 @@ function finish(){
  const kdS=kdCurrentStudent();
  let achievementHtml='';
  if(kdS){
-  const rec={id:kdUid(),studentId:kdS.studentId,studentCode:kdS.studentCode,org:kdS.org,classroomId:kdS.classroomId,classroomName:kdS.classroomName,nickname:kdS.nickname,mode:state.mode,rankLevel:(state.rankLevel??null),kind:state.kind,practiceDetail:(window.kdPracticeDetailV214?window.kdPracticeDetailV214(state.mode):''),elapsedMs:Math.round(time*1000),correctCount:correct,problemCount:items.length,isPerfect:perfect,recordedAt:new Date().toISOString()};
+  const rec={id:kdUid(),studentId:kdS.studentId,studentCode:kdS.studentCode,org:kdS.org,classroomId:kdS.classroomId,classroomName:kdS.classroomName,nickname:kdS.nickname,grade:kdS.grade||'',mode:state.mode,rankLevel:(state.rankLevel??null),kind:state.kind,practiceDetail:(window.kdPracticeDetailV214?window.kdPracticeDetailV214(state.mode):''),elapsedMs:Math.round(time*1000),correctCount:correct,problemCount:items.length,isPerfect:perfect,recordedAt:new Date().toISOString()};
   const beforeRank=kdRead(KD_RANK);
   const previousBest=beforeRank.filter(r=>String(r.studentId)===String(rec.studentId)&&r.mode===rec.mode&&r.isPerfect&&String(r.kind)===String(rec.kind)&&((r.rankLevel!=null&&rec.rankLevel!=null)?Number(r.rankLevel)===Number(rec.rankLevel):String(r.practiceDetail||'')===String(rec.practiceDetail||''))).sort((a,b)=>Number(a.elapsedMs)-Number(b.elapsedMs)||String(a.recordedAt).localeCompare(String(b.recordedAt)))[0]||null;
   const hist=kdRead(KD_HISTORY);hist.push(rec);kdWrite(KD_HISTORY,hist.slice(-1000));
@@ -1967,13 +1967,13 @@ init();
           : `<div class="kd-rank-my">👤 あなたの順位：${myVisibleRank}位　${(Number(myRow.elapsedMs)/1000).toFixed(3)}秒</div>`
       ) : '';
       return `<div class="kd-rank-group"><h3>${g.label}</h3>${note?`<div class="kd-rank-note">${note}</div>`:''}`+
-        (rows.length?`<div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>教室</th><th>タイム</th><th>記録日時</th></tr></thead><tbody>`+
+        (rows.length?`<div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>学年</th><th>教室</th><th>タイム</th><th>記録日時</th></tr></thead><tbody>`+
         rows.map((r,i)=>{
           const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'位';
           const name=r.nickname||r.studentCode||'—';
           const time=(Number(r.elapsedMs)/1000).toFixed(3)+'秒';
           const date=r.recordedAt?new Date(r.recordedAt).toLocaleString('ja-JP'):'—';
-          return `<tr><td class="kd-rank-medal">${medal}</td><td>${name}</td><td><b>${time}</b></td><td>${date}</td></tr>`;
+          return `<tr><td class="kd-rank-medal">${medal}</td><td>${name}</td><td>${esc(gradeLabel(r))}</td><td>${esc(classroomLabel(r))}</td><td><b>${time}</b></td><td>${date}</td></tr>`;
         }).join('')+
         `</tbody></table></div>`:'<div class="kd-rank-note">表示できるランキング対象者はいません。</div>')+
         myPanel+
@@ -2219,6 +2219,13 @@ init();
     const c=cs.find(x=>String(x.id)===String(r.classroomId));
     return (c&&(c.displayName||c.name)) || r.classroomName || '—';
   }
+  function gradeLabel(r){
+    const direct=r?.grade??r?.schoolGrade??r?.studentGrade;
+    if(direct!==undefined&&direct!==null&&String(direct).trim()!=='') return kdGradeLabel(direct);
+    const ss=kdRead('kdStudentsV28',[]);
+    const st=ss.find(x=>String(x.id)===String(r?.studentId));
+    return st?kdGradeLabel(st.grade):'—';
+  }
   function mulDivDetail(r){return r.practiceDetail||r.levelLabel||'—'}
   function levelNum(r){
     const n=Number(r.rankLevel??r.level);
@@ -2310,8 +2317,8 @@ init();
         const top=visible.slice(0,10);
 
         html+=`<div class="kd-mitori-subtitle">${esc(label)}</div>`;
-        html+=`<div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>教室</th><th>タイム</th></tr></thead><tbody>`;
-        html+=top.map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(name(r))}</td><td>${esc(classroomLabel(r))}</td><td>${time(r).toFixed(3)}秒</td></tr>`).join('');
+        html+=`<div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>学年</th><th>教室</th><th>タイム</th></tr></thead><tbody>`;
+        html+=top.map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(name(r))}</td><td>${esc(gradeLabel(r))}</td><td>${esc(classroomLabel(r))}</td><td>${time(r).toFixed(3)}秒</td></tr>`).join('');
         html+='</tbody></table></div>';
 
         const myAll=arr.filter(r=>r.studentId===sid).sort((a,b)=>time(a)-time(b));
@@ -2399,9 +2406,9 @@ init();
           String(a.recordedAt).localeCompare(String(b.recordedAt)));
 
       let html=`<div class="kd-rank-level-title">🏆 ${esc(g.label)}</div>`;
-      html+=`<div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>教室</th><th>タイム</th></tr></thead><tbody>`;
+      html+=`<div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>学年</th><th>教室</th><th>タイム</th></tr></thead><tbody>`;
       html+=visible.slice(0,10).map((r,i)=>
-        `<tr><td>${i+1}位</td><td>${esc(name(r))}</td><td>${esc(classroomLabel(r))}</td><td>${time(r).toFixed(3)}秒</td></tr>`
+        `<tr><td>${i+1}位</td><td>${esc(name(r))}</td><td>${esc(gradeLabel(r))}</td><td>${esc(classroomLabel(r))}</td><td>${time(r).toFixed(3)}秒</td></tr>`
       ).join('');
       html+='</tbody></table></div>';
 
@@ -2429,13 +2436,13 @@ init();
     const map=new Map();
     filterByPeriod(all().filter(r=>r.studentId),period).forEach(r=>{
       const id=String(r.studentId);
-      if(!map.has(id))map.set(id,{studentId:id,name:name(r),classroomName:r.classroomName||r.className||'—',count:0});
+      if(!map.has(id))map.set(id,{studentId:id,name:name(r),grade:gradeLabel(r),classroomName:r.classroomName||r.className||'—',count:0});
       map.get(id).count+=Number(r.correctCount)||0;
     });
     const rows=Array.from(map.values()).sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,'ja'));
     const sid=sess()?.studentId;
-    let html=`<div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>教室</th><th>正解数</th></tr></thead><tbody>`;
-    html+=rows.slice(0,10).map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(r.name)}</td><td>${esc(classroomLabel(r))}</td><td>${r.count}問</td></tr>`).join('');
+    let html=`<div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>学年</th><th>教室</th><th>正解数</th></tr></thead><tbody>`;
+    html+=rows.slice(0,10).map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(r.name)}</td><td>${esc(r.grade||'—')}</td><td>${esc(classroomLabel(r))}</td><td>${r.count}問</td></tr>`).join('');
     html+='</tbody></table></div>';
     const my=rows.findIndex(r=>r.studentId===sid);
     if(my>=0)html+=`<div class="kd-rank-my">👤 あなたの順位：${my+1}位　正解 ${rows[my].count}問</div>`;
@@ -2450,12 +2457,12 @@ init();
       const best=new Map();
       source.forEach(r=>{const grade=kdGradeLabel(r.grade??r.schoolGrade??r.studentGrade);const dg=mitoriDigitRange(r);if(grade==='—'||!dg)return;const id=String(r.studentId),score=(dg.max||0)*100+mitoriMouths(r),old=best.get(id);if(!old||score>old.score||(score===old.score&&time(r)<time(old)))best.set(id,{...r,grade,score});});
       const groups=new Map();Array.from(best.values()).forEach(r=>{if(!groups.has(r.grade))groups.set(r.grade,[]);groups.get(r.grade).push(r);});
-      body.innerHTML=Array.from(groups.entries()).sort((a,b)=>kdGradeOrder(a[0])-kdGradeOrder(b[0])).map(([g,rs])=>{rs.sort((a,b)=>b.score-a.score||time(a)-time(b));return `<div class="kd-grade-rank-note"><b>🎓 ${g}</b><br>記録達成時の学年で集計します。</div><div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>条件</th><th>タイム</th></tr></thead><tbody>${rs.slice(0,10).map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(name(r))}</td><td>${esc(mitoriDetailLabel(r))}</td><td>${time(r).toFixed(3)}秒</td></tr>`).join('')}</tbody></table></div>`;}).join('')||'<div class="kd-rank-note">この期間・種目の学年ランキング記録がありません。</div>';
+      body.innerHTML=Array.from(groups.entries()).sort((a,b)=>kdGradeOrder(a[0])-kdGradeOrder(b[0])).map(([g,rs])=>{rs.sort((a,b)=>b.score-a.score||time(a)-time(b));return `<div class="kd-grade-rank-note"><b>🎓 ${g}</b><br>記録達成時の学年で集計します。</div><div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>学年</th><th>条件</th><th>タイム</th></tr></thead><tbody>${rs.slice(0,10).map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(name(r))}</td><td>${esc(r.grade)}</td><td>${esc(mitoriDetailLabel(r))}</td><td>${time(r).toFixed(3)}秒</td></tr>`).join('')}</tbody></table></div>`;}).join('')||'<div class="kd-rank-note">この期間・種目の学年ランキング記録がありません。</div>';
       return;
     }
     const best=new Map();source.forEach(r=>{const grade=kdGradeLabel(r.grade??r.schoolGrade??r.studentGrade);if(grade==='—')return;const id=String(r.studentId),lv=levelNum(r),old=best.get(id);if(!old||lv>old.lv||(lv===old.lv&&time(r)<time(old)))best.set(id,{...r,grade,lv});});
     const groups=new Map();Array.from(best.values()).forEach(r=>{if(!groups.has(r.grade))groups.set(r.grade,[]);groups.get(r.grade).push(r);});
-    body.innerHTML=Array.from(groups.entries()).sort((a,b)=>kdGradeOrder(a[0])-kdGradeOrder(b[0])).map(([g,rs])=>{rs.sort((a,b)=>b.lv-a.lv||time(a)-time(b));return `<div class="kd-grade-rank-note"><b>🎓 ${g}</b><br>記録達成時の学年で集計。年度が替わっても過去の記録の学年は変わりません。</div><div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>LV</th><th>タイム</th></tr></thead><tbody>${rs.slice(0,10).map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(name(r))}</td><td>LV${r.lv}</td><td>${time(r).toFixed(3)}秒</td></tr>`).join('')}</tbody></table></div>`;}).join('')||'<div class="kd-rank-note">この期間・種目の学年ランキング記録がありません。</div>';
+    body.innerHTML=Array.from(groups.entries()).sort((a,b)=>kdGradeOrder(a[0])-kdGradeOrder(b[0])).map(([g,rs])=>{rs.sort((a,b)=>b.lv-a.lv||time(a)-time(b));return `<div class="kd-grade-rank-note"><b>🎓 ${g}</b><br>記録達成時の学年で集計。年度が替わっても過去の記録の学年は変わりません。</div><div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>学年</th><th>LV</th><th>タイム</th></tr></thead><tbody>${rs.slice(0,10).map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(name(r))}</td><td>${esc(r.grade)}</td><td>LV${r.lv}</td><td>${time(r).toFixed(3)}秒</td></tr>`).join('')}</tbody></table></div>`;}).join('')||'<div class="kd-rank-note">この期間・種目の学年ランキング記録がありません。</div>';
   }
 
   function periodRange(period){
@@ -2500,15 +2507,15 @@ init();
     const period=(mode==='streak'?'all':(document.getElementById(mode==='practiceDays'?'kdOnlinePeriodPracticeDays':'kdOnlinePeriodStreak')?.value||'all')); const range=periodRange(period), map=new Map();
     const days=qualifiedDayMap();
     const ids=new Set([...days.keys()]);
-    ids.forEach(id=>{const rows=all().filter(r=>String(r.studentId)===id);const sample=rows[0]||{};const ds=days.get(id)||[];const count=ds.filter(d=>inPeriod(d+'T00:00:00',range)).length;const streak=streakForDates(ds,period);map.set(id,{studentId:id,name:name(sample),classroomName:sample.classroomName||sample.className||'—',count,streak});});
+    ids.forEach(id=>{const rows=all().filter(r=>String(r.studentId)===id);const sample=rows[0]||{};const ds=days.get(id)||[];const count=ds.filter(d=>inPeriod(d+'T00:00:00',range)).length;const streak=streakForDates(ds,period);map.set(id,{studentId:id,name:name(sample),grade:gradeLabel(sample),classroomName:sample.classroomName||sample.className||'—',count,streak});});
     let rows=[...map.values()].filter(r=>r.count>0||r.streak>0);
     if(mode==='streak') rows.sort((a,b)=>b.streak-a.streak||b.count-a.count||a.name.localeCompare(b.name,'ja'));
     else rows.sort((a,b)=>b.count-a.count||b.streak-a.streak||a.name.localeCompare(b.name,'ja'));
     const title=mode==='streak'?'🔥 継続練習ランキング':'📅 練習日数ランキング';
     const metric=mode==='streak'?'継続':'練習日';
     let html=`<div class="kd-period-summary">${title}｜${range.label}<br><span class="small">${mode==='streak'?'その期間内の最長連続練習日数を表示します。':'一日の正答数が10題以上で「練習日」になります。'}</span></div>`;
-    html+=`<div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>教室</th><th>${metric}</th><th>練習日</th></tr></thead><tbody>`;
-    html+=rows.slice(0,10).map((r,i)=>`<tr><td>${i<3?['🥇','🥈','🥉'][i]:(i+1)+'位'}</td><td>${esc(r.name)}</td><td>${esc(classroomLabel(r))}</td><td>${mode==='streak'?r.streak+'日':r.count+'日'}</td><td>${r.count}日</td></tr>`).join(''); html+='</tbody></table></div>';
+    html+=`<div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>学年</th><th>教室</th><th>${metric}</th><th>練習日</th></tr></thead><tbody>`;
+    html+=rows.slice(0,10).map((r,i)=>`<tr><td>${i<3?['🥇','🥈','🥉'][i]:(i+1)+'位'}</td><td>${esc(r.name)}</td><td>${esc(r.grade||'—')}</td><td>${esc(classroomLabel(r))}</td><td>${mode==='streak'?r.streak+'日':r.count+'日'}</td><td>${r.count}日</td></tr>`).join(''); html+='</tbody></table></div>';
     const sid=String(sess()?.studentId||'');const my=rows.findIndex(r=>r.studentId===sid);if(my>=0)html+=`<div class="kd-rank-my">👤 あなた：${my+1}位　${mode==='streak'?`${rows[my].streak}日継続`:`${rows[my].count}日練習`}</div>`;else if(sid)html+='<div class="kd-rank-my">👤 あなたのランキング：対象期間の記録がありません。</div>';
     body.innerHTML=rows.length?html:'<div class="kd-rank-note">この期間の練習記録がまだありません。</div>';
   }
@@ -3016,11 +3023,11 @@ init();
     const map=new Map();
     all().forEach(r=>{const id=String(r.studentId);if(!map.has(id))map.set(id,{id,name:r.nickname||r.studentName||'生徒',classroom:r.classroomName||'—',days:new Map()});const o=map.get(id),k=dateKey(r.recordedAt);o.days.set(k,(o.days.get(k)||0)+(Number(r.correctCount)||0));});
     const now=new Date(),ym=`${now.getFullYear()}-${pad(now.getMonth()+1)}`;
-    return [...map.values()].map(o=>{const q=[...o.days.entries()].filter(x=>x[0].startsWith(ym)&&x[1]>=10).map(x=>x[0]).sort();let streak=0,cur=new Date();const set=new Set(q);while(set.has(dateKey(cur.toISOString()))){streak++;cur.setDate(cur.getDate()-1)};return {...o,monthDays:q.length,streak}}).sort((a,b)=>b.monthDays-a.monthDays||b.streak-a.streak||a.name.localeCompare(b.name,'ja'));
+    return [...map.values()].map(o=>{const q=[...o.days.entries()].filter(x=>x[0].startsWith(ym)&&x[1]>=10).map(x=>x[0]).sort();let streak=0,cur=new Date();const set=new Set(q);while(set.has(dateKey(cur.toISOString()))){streak++;cur.setDate(cur.getDate()-1)};return {...o,grade:kdGradeLabel(o.grade),monthDays:q.length,streak}}).sort((a,b)=>b.monthDays-a.monthDays||b.streak-a.streak||a.name.localeCompare(b.name,'ja'));
   }
   function renderHome(){const s=sess(),main=document.getElementById('kdHomeContinuityMain'),sub=document.getElementById('kdHomeContinuitySub');if(!main||!sub)return;if(!s){main.textContent='ログインすると表示されます';return}const x=calc(s.studentId);if(x.displayStreak>=5){main.textContent=`🔥 ${x.displayStreak}日継続中！`;}else{main.textContent=`今月 ${x.monthDays}日 練習`;}sub.textContent=x.todayCorrect>=10?`今日は${x.todayCorrect}問正解！「練習日」達成です。`:x.todayCorrect>0?`今日は${x.todayCorrect}問正解。あと${10-x.todayCorrect}問で「練習日」です。${x.displayStreak>=4?`あと1日で${x.displayStreak+1}日継続！`:''}`:`1日10題以上で「練習日」。5日以上続くと「○日継続中！」と表示します。`;}
   function render(){const s=sess(),stats=document.getElementById('kdContinuityStats'),msg=document.getElementById('kdContinuityMessage'),body=document.getElementById('kdContinuityRankingBody');if(!s||!stats||!body)return;const x=calc(s.studentId);stats.innerHTML=`<div class="kd-continuity-stat"><b>${x.monthDays}日</b><span>今月の練習日</span></div><div class="kd-continuity-stat"><b>${x.displayStreak}日</b><span>継続練習中</span></div><div class="kd-continuity-stat"><b>${x.best}日</b><span>最高連続日数</span></div><div class="kd-continuity-stat"><b>${x.todayCorrect}問</b><span>今日の正答数</span></div>`;msg.innerHTML=x.todayCorrect>=10?`🌟 <b>今日は練習日達成！</b> 実際に${x.todayCorrect}問正解できています。`:x.todayCorrect>0?`💪 あと<b>${10-x.todayCorrect}問</b>で今日も継続できます。現在${x.displayStreak}日継続中！`:`🌱 今日も10題を目標に。月が変わっても継続日数はつながります！`;
-    const rows=monthStats(); const sid=String(s.studentId); body.innerHTML=rows.length?`<div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>練習日</th><th>連続</th></tr></thead><tbody>${rows.slice(0,10).map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(r.name)}</td><td>${r.monthDays}日</td><td>${r.streak}日</td></tr>`).join('')}</tbody></table></div>`:'<div class="kd-rank-note">まだ練習日の記録がありません。</div>';const my=rows.findIndex(r=>r.id===sid);if(my>=0)body.innerHTML+=`<div class="kd-rank-my">👤 あなた：${my+1}位　今月${rows[my].monthDays}日練習</div>`;
+    const rows=monthStats(); const sid=String(s.studentId); body.innerHTML=rows.length?`<div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>学年</th><th>練習日</th><th>連続</th></tr></thead><tbody>${rows.slice(0,10).map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(r.name)}</td><td>${esc(r.grade||'—')}</td><td>${r.monthDays}日</td><td>${r.streak}日</td></tr>`).join('')}</tbody></table></div>`:'<div class="kd-rank-note">まだ練習日の記録がありません。</div>';const my=rows.findIndex(r=>r.id===sid);if(my>=0)body.innerHTML+=`<div class="kd-rank-my">👤 あなた：${my+1}位　今月${rows[my].monthDays}日練習</div>`;
   }
   document.addEventListener('click',e=>{if(e.target?.id==='kdContinuityOpenBtn'){kdOriginalShow('kdContinuity');render();}if(e.target?.id==='kdContinuityBackBtn')kdOriginalShow('home');});
   const oldShow=window.kdOriginalShow; if(typeof oldShow==='function'){window.kdOriginalShow=function(id){oldShow(id);if(id==='home')renderHome();}};
