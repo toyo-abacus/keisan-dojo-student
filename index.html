@@ -600,6 +600,27 @@ body.kd-locked main>section:not(#kdLogin){display:none!important}
   #keyboard.numkey button{min-height:50px !important;height:50px !important;padding:4px !important;}
 }
 </style>
+
+<style id="kd-achievement-v518-style">
+.kd-achievement{position:relative;overflow:hidden;text-align:center;margin:0 0 14px;padding:18px 12px 16px;border-radius:20px;border:3px solid #f0a000;background:linear-gradient(180deg,#fffdf3,#fff);box-shadow:0 5px 18px rgba(0,0,0,.10);animation:kdAchPop .45s ease-out}
+.kd-achievement:before,.kd-achievement:after{content:"✦";position:absolute;font-size:28px;animation:kdAchSpark 1.5s infinite ease-in-out}
+.kd-achievement:before{left:10%;top:12px}.kd-achievement:after{right:10%;bottom:10px;animation-delay:.35s}
+.kd-achievement-title{font-size:15px;font-weight:900;letter-spacing:.04em;margin-bottom:4px}
+.kd-achievement-main{font-size:clamp(28px,7vw,42px);font-weight:1000;line-height:1.08;margin:2px 0 7px;text-shadow:0 2px 0 rgba(255,255,255,.9)}
+.kd-achievement-sub{font-size:15px;font-weight:900;line-height:1.45}
+.kd-achievement-badges{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin-top:10px}
+.kd-achievement-badge{display:inline-block;padding:6px 11px;border-radius:999px;background:#fff;border:2px solid #f0a000;font-size:13px;font-weight:900}
+.kd-achievement.rankin{border-color:#d99a00;background:linear-gradient(180deg,#fff8d9,#fff)}
+.kd-achievement.rankin .kd-achievement-main{font-size:clamp(26px,6.5vw,38px)}
+.kd-achievement.newbest{border-color:#e34b72;background:linear-gradient(180deg,#fff1f5,#fff)}
+.kd-achievement.newbest .kd-achievement-badge{border-color:#e34b72}
+.kd-achievement.first{border-color:#4b8fe3;background:linear-gradient(180deg,#eff7ff,#fff)}
+.kd-achievement.first .kd-achievement-badge{border-color:#4b8fe3}
+@keyframes kdAchPop{0%{transform:scale(.94);opacity:.2}70%{transform:scale(1.02)}100%{transform:scale(1);opacity:1}}
+@keyframes kdAchSpark{0%,100%{transform:scale(.8) rotate(0deg);opacity:.35}50%{transform:scale(1.2) rotate(18deg);opacity:1}}
+@media(max-width:600px){.kd-achievement{padding:16px 9px 14px}.kd-achievement-sub{font-size:14px}.kd-achievement-badge{font-size:12px;padding:5px 9px}}
+</style>
+
 </head>
 <body>
 
@@ -1495,15 +1516,21 @@ function finish(){
  });
  let perfect=correct===items.length;
  const kdS=kdCurrentStudent();
+ let achievementHtml='';
  if(kdS){
   const rec={id:kdUid(),studentId:kdS.studentId,studentCode:kdS.studentCode,org:kdS.org,classroomId:kdS.classroomId,classroomName:kdS.classroomName,nickname:kdS.nickname,mode:state.mode,rankLevel:(state.rankLevel??null),kind:state.kind,practiceDetail:(window.kdPracticeDetailV214?window.kdPracticeDetailV214(state.mode):''),elapsedMs:Math.round(time*1000),correctCount:correct,problemCount:items.length,isPerfect:perfect,recordedAt:new Date().toISOString()};
+  const beforeRank=kdRead(KD_RANK);
+  const previousBest=beforeRank.filter(r=>String(r.studentId)===String(rec.studentId)&&r.mode===rec.mode&&r.isPerfect&&String(r.kind)===String(rec.kind)&&((r.rankLevel!=null&&rec.rankLevel!=null)?Number(r.rankLevel)===Number(rec.rankLevel):String(r.practiceDetail||'')===String(rec.practiceDetail||''))).sort((a,b)=>Number(a.elapsedMs)-Number(b.elapsedMs)||String(a.recordedAt).localeCompare(String(b.recordedAt)))[0]||null;
   const hist=kdRead(KD_HISTORY);hist.push(rec);kdWrite(KD_HISTORY,hist.slice(-1000));
   if(state.mode==='rank'&&perfect){
    const ranks=kdRead(KD_RANK);ranks.push({...rec,status:'valid'});kdWrite(KD_RANK,ranks);
+   if(window.kdAchievementV519) achievementHtml=window.kdAchievementV519(rec,previousBest,window.kdAchievementV519.rankInfo?window.kdAchievementV519.rankInfo(rec):null);
+  }else if(perfect&&window.kdAchievementV519){
+   achievementHtml=window.kdAchievementV519(rec,previousBest,{rank:0,top10:false,scopes:[]});
   }
  }
  $('resultTitle').textContent=perfect?'🎉 満点！':'結果';
- $('resultBody').innerHTML=(perfect?`<div class="perfect-result-hero"><div class="perfect-result-circle">〇</div><div class="perfect-result-text">正解！</div><div class="perfect-result-sub">全問正解・満点です！</div></div>`:'')+`<div class="result"><div class="${perfect?'':'result-summary-ng'}">${correct} / ${items.length}問正解</div>${perfect?`<br><span class="timer">${time.toFixed(3)}秒</span><br><span class="badge">タイム記録対象</span>`:`<br><span class="badge">満点ではないためタイムは記録・表示しません</span>`}</div><div class="detail">${details.join('')}</div>`;
+ $('resultBody').innerHTML=achievementHtml+(perfect?`<div class="perfect-result-hero"><div class="perfect-result-circle">〇</div><div class="perfect-result-text">正解！</div><div class="perfect-result-sub">全問正解・満点です！</div></div>`:'')+`<div class="result"><div class="${perfect?'':'result-summary-ng'}">${correct} / ${items.length}問正解</div>${perfect?`<br><span class="timer">${time.toFixed(3)}秒</span><br><span class="badge">タイム記録対象</span>`:`<br><span class="badge">満点ではないためタイムは記録・表示しません</span>`}</div><div class="detail">${details.join('')}</div>`;
  const resultRankingBtn=$('kdResultRankingBtn');
  const resultSelfBtn=$('kdResultSelfRankingBtn');
  const resultBestBtn=$('kdResultBestBtn');
@@ -3008,6 +3035,91 @@ init();
     if(!b)return;
     setTimeout(forceRender,0);
   },true);
+})();
+</script>
+
+
+<script id="kd-achievement-v519-js">
+(function(){
+  const RANK_KEY='kdRankV28', HISTORY_KEY='kdHistoryV28';
+  function current(){return typeof kdCurrentStudent==='function'?kdCurrentStudent():null}
+  function perfectRows(){return kdRead(RANK_KEY,[]).filter(r=>r.mode==='rank' && r.isPerfect && (r.status==='valid'||r.status==null))}
+  function sameDetail(a,b){
+    if(String(a.kind)!==String(b.kind))return false;
+    if(a.kind==='mul'||a.kind==='div'){
+      if(a.rankLevel!=null && b.rankLevel!=null)return Number(a.rankLevel)===Number(b.rankLevel);
+    }
+    return String(a.practiceDetail||'')===String(b.practiceDetail||'');
+  }
+  function levelKey(r){
+    if(r.kind==='mul'||r.kind==='div')return 'lv'+String(r.rankLevel??'');
+    if(r.kind==='mitori'){
+      const m=String(r.practiceDetail||'').match(/(\d+)\s*桁\s*(\d+)\s*口/);
+      return m?`m${m[1]}_${m[2]}`:String(r.practiceDetail||'');
+    }
+    return String(r.practiceDetail||'');
+  }
+  function scopeRows(scope,groupId){
+    const rows=perfectRows();
+    return window.kdRankingScopeV157?window.kdRankingScopeV157.filter(rows,scope,groupId):rows;
+  }
+  function rankInRows(rec,rows){
+    const same=rows.filter(r=>String(r.kind)===String(rec.kind)&&levelKey(r)===levelKey(rec));
+    const best=new Map();
+    same.forEach(r=>{
+      const id=String(r.studentId),cur=best.get(id);
+      if(!cur||Number(r.elapsedMs)<Number(cur.elapsedMs)||(Number(r.elapsedMs)===Number(cur.elapsedMs)&&String(r.recordedAt).localeCompare(String(cur.recordedAt))<0))best.set(id,r);
+    });
+    const sorted=[...best.values()].sort((a,b)=>Number(a.elapsedMs)-Number(b.elapsedMs)||String(a.recordedAt).localeCompare(String(b.recordedAt)));
+    const rank=sorted.findIndex(r=>String(r.studentId)===String(rec.studentId))+1;
+    return {rank,top10:rank>0&&rank<=10,total:sorted.length};
+  }
+  function groupNamesFor(s){
+    if(!s||!window.kdRankingScopeV157)return [];
+    return (window.kdRankingScopeV157.eligibleGroups?.(s)||[]).map(g=>({id:String(g.id),name:g.name||g.displayName||'特別グループ'}));
+  }
+  function scopeResults(rec){
+    const s=current();
+    const out=[{scope:'all',label:'🌐 計算道場全体',info:rankInRows(rec,scopeRows('all',''))}];
+    if(window.kdRankingScopeV157?.hasMultiClassOrg?.(s)) out.push({scope:'org',label:'🏢 団体内',info:rankInRows(rec,scopeRows('org',''))});
+    if(s?.classroomId) out.push({scope:'classroom',label:'🏫 教室内',info:rankInRows(rec,scopeRows('classroom',''))});
+    groupNamesFor(s).forEach(g=>out.push({scope:'group',label:`⭐ ${g.name}`,info:rankInRows(rec,scopeRows('group',g.id))}));
+    return out.filter(x=>x.info.top10);
+  }
+  function detailLabel(rec){
+    const kind=rec.kind==='mul'?'かけ算':rec.kind==='div'?'わり算':'見取算';
+    let detail='';
+    if(rec.kind==='mul'||rec.kind==='div') detail=`LV${rec.rankLevel??'—'}`;
+    else detail=String(rec.practiceDetail||'');
+    return `${kind} ${detail}`.trim();
+  }
+  function build(rec, previousBest, rankData){
+    const parts=[];
+    if(previousBest==null){
+      parts.push({cls:'first',title:'🌟 はじめての記録！',main:'ナイスチャレンジ！',sub:'ここから自己ベストを作っていこう！'});
+    }else if(Number(rec.elapsedMs)<Number(previousBest.elapsedMs)){
+      const diff=((Number(previousBest.elapsedMs)-Number(rec.elapsedMs))/1000).toFixed(3);
+      parts.push({cls:'newbest',title:'🏆 自己ベスト更新！',main:'新記録だ！！',sub:`前の自己ベストより <b>${diff}秒</b> 速くなったよ！`});
+    }
+    if(rec.mode==='rank'&&rec.isPerfect){
+      const top=(rankData?.scopes||[]).filter(x=>x.info.top10);
+      if(top.length){
+        const lines=top.map(x=>`<div style="margin-top:4px">${x.label} → <b>${x.info.rank}位！</b></div>`).join('');
+        if(parts.length){
+          parts[0].cls+=' rankin';
+          parts[0].sub += `<br><span style="font-size:17px"><b>🎊 ランキングTOP10入り！</b></span><div style="font-size:15px;margin-top:4px">${lines}</div>`;
+        }else{
+          parts.push({cls:'rankin',title:'🎊 ランキング入り！！',main:`${top[0].info.rank}位！`,sub:`<b>${detailLabel(rec)}</b><br><span style="font-size:17px">ランキングTOP10入り！</span><div style="font-size:15px;margin-top:5px">${lines}</div>`});
+        }
+      }
+    }
+    if(!parts.length)return '';
+    return parts.map(p=>`<div class="kd-achievement ${p.cls}"><div class="kd-achievement-title">${p.title}</div><div class="kd-achievement-main">${p.main}</div><div class="kd-achievement-sub">${p.sub}</div><div class="kd-achievement-badges"><span class="kd-achievement-badge">🔥 よくがんばった！</span>${rec.mode==='rank'&&rec.isPerfect&&rankData?.scopes?.some(x=>x.info.top10)?`<span class="kd-achievement-badge">🏆 ${detailLabel(rec)}</span>`:''}</div></div>`).join('');
+  }
+  function rankInfo(rec){return {rank:rankInRows(rec,perfectRows()).rank,top10:rankInRows(rec,perfectRows()).top10,total:rankInRows(rec,perfectRows()).total,scopes:scopeResults(rec)}}
+  window.kdAchievementV519=function(rec, previousBest, rank){return build(rec,previousBest,rank||{rank:0,top10:false,scopes:[]})};
+  window.kdAchievementV519.rankInfo=rankInfo;
+  window.kdAchievementV518=window.kdAchievementV519;
 })();
 </script>
 
