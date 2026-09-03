@@ -2526,6 +2526,56 @@ init();
     const periodIds={time:'kdOnlinePeriodTime',correct:'kdOnlinePeriodCorrect',grade:'kdOnlinePeriodGrade'};
     const period=mode==='streak'||mode==='practiceDays'?'all':(document.getElementById(periodIds[mode])?.value||'all');
     const range=periodRangeForPosition(period);
+
+    // 継続練習・練習日数は種目別タイムではなく、全種目の正答数を合算した「練習日」で順位を出す。
+    if(mode==='streak'||mode==='practiceDays'){
+      const daysByStudent=new Map();
+      all().forEach(r=>{
+        if(!r.studentId)return;
+        const id=String(r.studentId);
+        const d=new Date(r.recordedAt||0);
+        if(Number.isNaN(d.getTime()))return;
+        const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        if(!daysByStudent.has(id))daysByStudent.set(id,new Map());
+        const m=daysByStudent.get(id);
+        m.set(key,(m.get(key)||0)+(Number(r.correctCount)||0));
+      });
+      const rankRows=[];
+      daysByStudent.forEach((dayMap,id)=>{
+        const qualified=[...dayMap.entries()]
+          .filter(([key,count])=>count>=10)
+          .map(([key])=>key)
+          .sort();
+        if(!qualified.length)return;
+        let streak=0,bestStreak=0,prev=null;
+        for(const key of qualified){
+          const d=new Date(key+'T00:00:00');
+          if(prev){
+            const diff=Math.round((d-prev)/86400000);
+            streak=diff===1?streak+1:1;
+          }else streak=1;
+          bestStreak=Math.max(bestStreak,streak); prev=d;
+        }
+        const count=qualified.length;
+        const sample=all().find(r=>String(r.studentId)===id)||{};
+        rankRows.push({studentId:id,name:name(sample),count,streak:bestStreak});
+      });
+      const arr=rankRows.sort((a,b)=>mode==='streak'
+        ?b.streak-a.streak||b.count-a.count||a.name.localeCompare(b.name,'ja')
+        :b.count-a.count||b.streak-a.streak||a.name.localeCompare(b.name,'ja'));
+      const mine=arr.findIndex(r=>String(r.studentId)===String(s.studentId));
+      if(mine>=0){
+        const r=arr[mine];
+        body.innerHTML=mode==='streak'
+          ? `継続 <b>${r.streak}日</b>　｜　現在 <b>${mine+1}位</b>`
+          : `練習 <b>${r.count}日</b>　｜　現在 <b>${mine+1}位</b>`;
+      }else{
+        body.innerHTML=mode==='streak'
+          ? '<span class="sub">まだ継続練習の記録がありません。</span>'
+          : '<span class="sub">まだ練習日の記録がありません。</span>';
+      }
+      return;
+    }
     const rows=all().filter(r=>r.mode==='rank'&&r.studentId).filter(r=>{if(!range.start)return true;const d=new Date(r.recordedAt||0);return d>=range.start&&d<=range.end;});
 
     if(mode==='correct'){
