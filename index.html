@@ -750,6 +750,19 @@ body.kd-locked main>section:not(#kdLogin){display:none!important}
   <h2>🥇 ランキング</h2>
   <p class="small">現在はこの端末に保存されている「挑戦」の全問正解記録で試作しています。クラウド化した際も同じ順位ルールを使います。</p>
   <div class="kd-rank-note">オンラインランキングでは、TOP10入りしていなくてもログイン中のあなたの順位を確認できます。上位レベルでTOP10入りしている場合は、下位レベルでは非表示となります。</div>
+<div id="kdRankingScopeWrap" class="kd-ranking-scope-wrap" style="margin:12px 0">
+  <div style="font-weight:800;margin-bottom:7px">ランキング範囲</div>
+  <div class="kd-online-tabs" id="kdRankingScopeTabs" role="tablist">
+    <button type="button" class="kd-online-tab active" data-kd-rank-scope="all">🌐 計算道場全体</button>
+    <button type="button" class="kd-online-tab" data-kd-rank-scope="org" id="kdRankingScopeOrg">🏢 団体内</button>
+    <button type="button" class="kd-online-tab" data-kd-rank-scope="classroom">🏫 教室内</button>
+    <button type="button" class="kd-online-tab" data-kd-rank-scope="group" id="kdRankingScopeGroup">⭐ 特別グループ</button>
+  </div>
+  <div id="kdRankingGroupSelectWrap" style="display:none;margin-top:8px">
+    <label for="kdRankingGroupSelect" style="font-weight:800">特別グループ</label>
+    <select id="kdRankingGroupSelect" style="margin-left:8px;max-width:260px"></select>
+  </div>
+</div>
 <div class="kd-online-tabs" role="tablist">
   <button type="button" class="kd-online-tab active" data-kd-rank-mode="time">🏆 タイム</button>
   <button type="button" class="kd-online-tab" data-kd-rank-mode="correct">🎯 正答数</button>
@@ -2098,14 +2111,56 @@ init();
 </script>
 
 
+<script id="kd-ranking-scope-v157">
+(function(){
+  const CLASS='kdClassesV28', ORG='kdOrgsV28', GROUP='kdRankingGroupsV28';
+  function classes(){return kdRead(CLASS,[]);}
+  function orgs(){return kdRead(ORG,[]);}
+  function groups(){return kdRead(GROUP,[]).filter(g=>g&&g.status!=='無効'&&Array.isArray(g.classrooms));}
+  function current(){return kdRead('kdSessionV28',null);}
+  function classOf(id){return classes().find(c=>String(c.id)===String(id));}
+  function orgOf(id){return orgs().find(o=>String(o.id)===String(id));}
+  function eligibleGroups(s){
+    if(!s)return [];
+    return groups().filter(g=>g.classrooms.some(cid=>String(cid)===String(s.classroomId)));
+  }
+  function orgCodeForRecord(r){
+    if(r.org!=null&&String(r.org)!=='')return String(r.org);
+    const c=classOf(r.classroomId);
+    const o=c&&orgOf(c.organizationId);
+    return o?.code ?? r.organizationId ?? '';
+  }
+  function filter(rows,scope,groupId){
+    const s=current(); if(!s)return [];
+    if(scope==='classroom') return rows.filter(r=>String(r.classroomId)===String(s.classroomId));
+    if(scope==='org') return rows.filter(r=>String(orgCodeForRecord(r))===String(s.org));
+    if(scope==='group'){
+      const g=eligibleGroups(s).find(x=>String(x.id)===String(groupId));
+      if(!g)return [];
+      const ids=new Set(g.classrooms.map(String));
+      return rows.filter(r=>ids.has(String(r.classroomId)));
+    }
+    return rows;
+  }
+  function hasMultiClassOrg(s){
+    if(!s)return false;
+    return classes().filter(c=>String(c.organizationId)===String(s.org)).length>1;
+  }
+  window.kdRankingScopeV157={classes,groups,current,eligibleGroups,filter,hasMultiClassOrg};
+})();
+</script>
+
 <script id="kd-online-ranking-v236-js">
 (function(){
   const HIST='kdHistoryV28', SESSION='kdSessionV28';
   let mode='time';
+  let scope='all';
+  let groupId='';
   window.kdSetOnlineRankingMode=function(next){ mode=next||'time'; render(); };
+  window.kdSetOnlineRankingScopeV157=function(next){ scope=next||'all'; syncScopeUI(); render(); if(window.kdRenderYourCurrentPositionV244)setTimeout(window.kdRenderYourCurrentPositionV244,0); };
 
   function sess(){return kdRead(SESSION,null)}
-  function all(){return kdRead(HIST,[])}
+  function all(){return window.kdRankingScopeV157?window.kdRankingScopeV157.filter(kdRead(HIST,[]),scope,groupId):kdRead(HIST,[])}
   function perfect(r){
     return !!r.isPerfect || (r.correctCount!=null&&r.problemCount!=null&&Number(r.correctCount)===Number(r.problemCount));
   }
@@ -2419,7 +2474,25 @@ init();
     const map={time:'kdPeriodTime',correct:'kdPeriodCorrect',grade:'kdPeriodGrade',streak:'kdPeriodStreak',practiceDays:'kdPeriodPracticeDays'};const e=document.getElementById(map[mode]);if(e)e.style.display='block';
   }
   function selectedPeriod(){const map={time:'kdOnlinePeriodTime',correct:'kdOnlinePeriodCorrect',grade:'kdOnlinePeriodGrade',streak:'kdOnlinePeriodStreak',practiceDays:'kdOnlinePeriodPracticeDays'};return document.getElementById(map[mode])?.value||'all';}
+  function syncScopeUI(){
+    const s=sess(), api=window.kdRankingScopeV157;
+    const orgBtn=document.getElementById('kdRankingScopeOrg'), groupBtn=document.getElementById('kdRankingScopeGroup'), wrap=document.getElementById('kdRankingGroupSelectWrap'), sel=document.getElementById('kdRankingGroupSelect');
+    const showOrg=!!(api&&api.hasMultiClassOrg(s));
+    if(orgBtn)orgBtn.style.display=showOrg?'':'none';
+    const gs=api&&api.eligibleGroups?api.eligibleGroups(s):[];
+    if(groupBtn)groupBtn.style.display=gs.length?'':'none';
+    if(sel){
+      if(!gs.some(g=>String(g.id)===String(groupId))) groupId=gs[0]?.id||'';
+      sel.innerHTML=gs.map(g=>`<option value="${esc(g.id)}">${esc(g.name||g.id)}</option>`).join('');
+      if(groupId)sel.value=groupId;
+    }
+    if(wrap)wrap.style.display=scope==='group'&&gs.length?'block':'none';
+    document.querySelectorAll('#kdRankingScopeTabs [data-kd-rank-scope]').forEach(b=>b.classList.toggle('active',b.dataset.kdRankScope===scope));
+    if(!showOrg&&scope==='org')scope='all';
+    if(!gs.length&&scope==='group')scope='all';
+  }
   function render(){
+    syncScopeUI();
     const d=document.getElementById('kdOnlineRankDescription');updatePeriodUI();
     if(mode==='time'){if(d)d.textContent='今月・先月・過去全て。';renderTime(document.getElementById('kdRankingKindTime')?.value||'mul',selectedPeriod());}
     else if(mode==='correct'){if(d)d.textContent='自由練習＋オンラインランキング挑戦の正答数を合算します。';renderCorrect(selectedPeriod());}
@@ -2427,7 +2500,17 @@ init();
     else {if(d)d.textContent=mode==='streak'?'過去全ての継続練習ランキングです。':'一日の正答数が10題以上で「練習日」になります。その期間の練習日数をランキングします。';renderPracticeRank(mode);}
   }
 
-  document.addEventListener('change',function(e){if(e.target&&['kdOnlinePeriodTime','kdOnlinePeriodCorrect','kdOnlinePeriodGrade','kdOnlinePeriodStreak','kdOnlinePeriodPracticeDays','kdRankingKindTime','kdRankingKindGrade'].includes(e.target.id))render();});
+  document.addEventListener('click',function(e){
+    const b=e.target?.closest?.('[data-kd-rank-scope]');
+    if(!b)return;
+    const next=b.dataset.kdRankScope||'all';
+    if(window.kdSetOnlineRankingScopeV157)window.kdSetOnlineRankingScopeV157(next);
+  });
+  document.addEventListener('change',function(e){
+    if(e.target?.id==='kdRankingGroupSelect'){groupId=e.target.value||'';render();if(window.kdRenderYourCurrentPositionV244)setTimeout(window.kdRenderYourCurrentPositionV244,0);return;}
+    if(e.target&&['kdOnlinePeriodTime','kdOnlinePeriodCorrect','kdOnlinePeriodGrade','kdOnlinePeriodStreak','kdOnlinePeriodPracticeDays','kdRankingKindTime','kdRankingKindGrade'].includes(e.target.id))render();
+  });
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(syncScopeUI,0));
   window.kdRenderOnlineRankingV236=render;
 })();
 </script>
@@ -2500,7 +2583,11 @@ init();
   const HIST='kdHistoryV28', SESSION='kdSessionV28';
 
   function sess(){return kdRead(SESSION,null)}
-  function all(){return kdRead(HIST,[])}
+  function all(){
+    const activeScope=document.querySelector('#kdRankingScopeTabs [data-kd-rank-scope].active')?.dataset?.kdRankScope||'all';
+    const groupId=document.getElementById('kdRankingGroupSelect')?.value||'';
+    return window.kdRankingScopeV157?window.kdRankingScopeV157.filter(kdRead(HIST,[]),activeScope,groupId):kdRead(HIST,[]);
+  }
   function perfect(r){
     return !!r.isPerfect || (r.correctCount!=null&&r.problemCount!=null&&Number(r.correctCount)===Number(r.problemCount));
   }
@@ -2760,7 +2847,7 @@ init();
   }
 
   document.addEventListener('change',function(e){
-    if((e.target?.id==='kdRankingKindTime'||e.target?.id==='kdRankingKindGrade'||e.target?.id==='kdOnlinePeriodTime'||e.target?.id==='kdOnlinePeriodCorrect'||e.target?.id==='kdOnlinePeriodGrade') && window.kdRenderYourCurrentPositionV244) setTimeout(window.kdRenderYourCurrentPositionV244,0);
+    if((e.target?.id==='kdRankingKindTime'||e.target?.id==='kdRankingKindGrade'||e.target?.id==='kdOnlinePeriodTime'||e.target?.id==='kdOnlinePeriodCorrect'||e.target?.id==='kdOnlinePeriodGrade'||e.target?.id==='kdRankingGroupSelect') && window.kdRenderYourCurrentPositionV244) setTimeout(window.kdRenderYourCurrentPositionV244,0);
   });
   document.addEventListener('click',function(e){
     if(e.target?.closest?.('[data-kd-rank-mode]') && window.kdRenderYourCurrentPositionV244) setTimeout(window.kdRenderYourCurrentPositionV244,0);
@@ -2782,7 +2869,7 @@ init();
 </script>
 
 
-<!-- 計算道場 生徒用 GitHub登録版 v1.3 -->
+<!-- 計算道場 生徒用 GitHub登録版 v1.5.17 -->
 
 <script id="kd-student-physical-keyboard-v12">
 (function(){
