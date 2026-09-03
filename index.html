@@ -873,6 +873,24 @@ body.kd-locked main>section:not(#kdLogin){display:none!important}
 </main>
 
 <script>
+function kdGradeLabel(v){
+  if(v===null||v===undefined||v==='') return '—';
+  const s=String(v).trim();
+  const exact=['年少','年中','年長','小1','小2','小3','小4','小5','小6','中1','中2','中3','高校・一般'];
+  if(exact.includes(s)) return s;
+  const n=Number(v);
+  if(Number.isFinite(n)){
+    const map={1:'小1',2:'小2',3:'小3',4:'小4',5:'小5',6:'小6',7:'中1',8:'中2',9:'中3',10:'高校・一般'};
+    if(map[n]) return map[n];
+  }
+  return s;
+}
+function kdGradeOrder(v){
+  const s=kdGradeLabel(v);
+  const map={'年少':1,'年中':2,'年長':3,'小1':4,'小2':5,'小3':6,'小4':7,'小5':8,'小6':9,'中1':10,'中2':11,'中3':12,'高校・一般':13};
+  return map[s]||999;
+}
+
 const $=id=>document.getElementById(id);
 const state={};
 let timerId=null,startAt=0,problemIndex=0,answers=[],items=[];
@@ -2430,14 +2448,14 @@ init();
     const source=filterByAcademicYear(perfectRows().filter(r=>r.kind===kind),period);
     if(kind==='mitori'){
       const best=new Map();
-      source.forEach(r=>{const grade=Number(r.grade??r.schoolGrade??r.studentGrade);const dg=mitoriDigitRange(r);if(!Number.isFinite(grade)||!dg)return;const id=String(r.studentId),score=(dg.max||0)*100+mitoriMouths(r),old=best.get(id);if(!old||score>old.score||(score===old.score&&time(r)<time(old)))best.set(id,{...r,grade,score});});
+      source.forEach(r=>{const grade=kdGradeLabel(r.grade??r.schoolGrade??r.studentGrade);const dg=mitoriDigitRange(r);if(grade==='—'||!dg)return;const id=String(r.studentId),score=(dg.max||0)*100+mitoriMouths(r),old=best.get(id);if(!old||score>old.score||(score===old.score&&time(r)<time(old)))best.set(id,{...r,grade,score});});
       const groups=new Map();Array.from(best.values()).forEach(r=>{if(!groups.has(r.grade))groups.set(r.grade,[]);groups.get(r.grade).push(r);});
-      body.innerHTML=Array.from(groups.entries()).sort((a,b)=>a[0]-b[0]).map(([g,rs])=>{rs.sort((a,b)=>b.score-a.score||time(a)-time(b));return `<div class="kd-grade-rank-note"><b>🎓 ${g}年生</b><br>記録達成時の学年で集計します。</div><div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>条件</th><th>タイム</th></tr></thead><tbody>${rs.slice(0,10).map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(name(r))}</td><td>${esc(mitoriDetailLabel(r))}</td><td>${time(r).toFixed(3)}秒</td></tr>`).join('')}</tbody></table></div>`;}).join('')||'<div class="kd-rank-note">この期間・種目の学年ランキング記録がありません。</div>';
+      body.innerHTML=Array.from(groups.entries()).sort((a,b)=>kdGradeOrder(a[0])-kdGradeOrder(b[0])).map(([g,rs])=>{rs.sort((a,b)=>b.score-a.score||time(a)-time(b));return `<div class="kd-grade-rank-note"><b>🎓 ${g}</b><br>記録達成時の学年で集計します。</div><div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>条件</th><th>タイム</th></tr></thead><tbody>${rs.slice(0,10).map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(name(r))}</td><td>${esc(mitoriDetailLabel(r))}</td><td>${time(r).toFixed(3)}秒</td></tr>`).join('')}</tbody></table></div>`;}).join('')||'<div class="kd-rank-note">この期間・種目の学年ランキング記録がありません。</div>';
       return;
     }
-    const best=new Map();source.forEach(r=>{const grade=Number(r.grade??r.schoolGrade??r.studentGrade);if(!Number.isFinite(grade))return;const id=String(r.studentId),lv=levelNum(r),old=best.get(id);if(!old||lv>old.lv||(lv===old.lv&&time(r)<time(old)))best.set(id,{...r,grade,lv});});
+    const best=new Map();source.forEach(r=>{const grade=kdGradeLabel(r.grade??r.schoolGrade??r.studentGrade);if(grade==='—')return;const id=String(r.studentId),lv=levelNum(r),old=best.get(id);if(!old||lv>old.lv||(lv===old.lv&&time(r)<time(old)))best.set(id,{...r,grade,lv});});
     const groups=new Map();Array.from(best.values()).forEach(r=>{if(!groups.has(r.grade))groups.set(r.grade,[]);groups.get(r.grade).push(r);});
-    body.innerHTML=Array.from(groups.entries()).sort((a,b)=>a[0]-b[0]).map(([g,rs])=>{rs.sort((a,b)=>b.lv-a.lv||time(a)-time(b));return `<div class="kd-grade-rank-note"><b>🎓 ${g}年生</b><br>記録達成時の学年で集計。年度が替わっても過去の記録の学年は変わりません。</div><div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>LV</th><th>タイム</th></tr></thead><tbody>${rs.slice(0,10).map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(name(r))}</td><td>LV${r.lv}</td><td>${time(r).toFixed(3)}秒</td></tr>`).join('')}</tbody></table></div>`;}).join('')||'<div class="kd-rank-note">この期間・種目の学年ランキング記録がありません。</div>';
+    body.innerHTML=Array.from(groups.entries()).sort((a,b)=>kdGradeOrder(a[0])-kdGradeOrder(b[0])).map(([g,rs])=>{rs.sort((a,b)=>b.lv-a.lv||time(a)-time(b));return `<div class="kd-grade-rank-note"><b>🎓 ${g}</b><br>記録達成時の学年で集計。年度が替わっても過去の記録の学年は変わりません。</div><div style="overflow-x:auto"><table class="kd-rank-table"><thead><tr><th>順位</th><th>生徒</th><th>LV</th><th>タイム</th></tr></thead><tbody>${rs.slice(0,10).map((r,i)=>`<tr><td>${i+1}位</td><td>${esc(name(r))}</td><td>LV${r.lv}</td><td>${time(r).toFixed(3)}秒</td></tr>`).join('')}</tbody></table></div>`;}).join('')||'<div class="kd-rank-note">この期間・種目の学年ランキング記録がありません。</div>';
   }
 
   function periodRange(period){
@@ -2728,8 +2746,8 @@ init();
     if(mode==='grade'){
       const best=new Map();
       rows.filter(perfect).forEach(r=>{
-        const grade=Number(r.grade??r.schoolGrade??r.studentGrade);
-        if(!Number.isFinite(grade))return;
+        const grade=kdGradeLabel(r.grade??r.schoolGrade??r.studentGrade);
+        if(grade==='—')return;
         const id=String(r.studentId), lv=levelNum(r), old=best.get(id);
         if(!old||lv>old.lv||(lv===old.lv&&time(r)<time(old)))best.set(id,{...r,grade,lv});
       });
@@ -2737,7 +2755,7 @@ init();
       if(!mine){body.innerHTML='<span class="sub">学年ランキング対象の全問正解記録がありません。</span>';return}
       const arr=Array.from(best.values()).filter(r=>r.grade===mine.grade).sort((a,b)=>b.lv-a.lv||time(a)-time(b)||String(a.recordedAt).localeCompare(String(b.recordedAt)));
       const i=arr.findIndex(r=>String(r.studentId)===String(s.studentId));
-      body.innerHTML=`${mine.grade}年生　｜　<b>LV${mine.lv}</b>　｜　現在 <b>${i+1}位</b><br><span class="sub">${time(mine).toFixed(3)}秒</span>`;
+      body.innerHTML=`${kdGradeLabel(mine.grade)}　｜　<b>LV${mine.lv}</b>　｜　現在 <b>${i+1}位</b><br><span class="sub">${time(mine).toFixed(3)}秒</span>`;
       return;
     }
 
