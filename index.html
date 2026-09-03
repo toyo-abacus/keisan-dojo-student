@@ -2515,6 +2515,24 @@ init();
 
   function periodRangeForPosition(period){const now=new Date(),d0=new Date(now.getFullYear(),now.getMonth(),now.getDate());if(period==='all')return {start:null,end:null};if(period==='today')return {start:d0,end:new Date(d0.getTime()+86400000-1)};if(period==='yesterday')return {start:new Date(d0.getTime()-86400000),end:new Date(d0.getTime()-1)};const dow=d0.getDay(),off=(dow+6)%7;if(period==='thisWeek'){const st=new Date(d0.getTime()-off*86400000);return {start:st,end:new Date(st.getTime()+7*86400000-1)}}if(period==='lastWeek'){const en=new Date(d0.getTime()-off*86400000-1);return {start:new Date(en.getTime()-6*86400000),end:en}}if(period==='thisMonth')return {start:new Date(now.getFullYear(),now.getMonth(),1),end:new Date(now.getFullYear(),now.getMonth()+1,1)-1};if(period==='lastMonth')return {start:new Date(now.getFullYear(),now.getMonth()-1,1),end:new Date(now.getFullYear(),now.getMonth(),1)-1};return {start:null,end:null};}
 
+  function personalPracticeStats(studentId){
+    const days=new Map();
+    all().filter(r=>String(r.studentId)===String(studentId)).forEach(r=>{
+      const key=new Date(r.recordedAt||0);
+      if(Number.isNaN(key.getTime()))return;
+      const day=`${key.getFullYear()}-${String(key.getMonth()+1).padStart(2,'0')}-${String(key.getDate()).padStart(2,'0')}`;
+      days.set(day,(days.get(day)||0)+(Number(r.correctCount)||0));
+    });
+    const qualified=[...days.entries()].filter(x=>x[1]>=10).map(x=>x[0]).sort();
+    let best=0,cur=0,prev=null;
+    qualified.forEach(day=>{
+      const d=new Date(day+'T00:00:00');
+      if(prev){const p=new Date(prev+'T00:00:00'); const diff=Math.round((d-p)/86400000); cur=diff===1?cur+1:1;}else cur=1;
+      best=Math.max(best,cur); prev=day;
+    });
+    return {totalDays:qualified.length,bestStreak:best};
+  }
+
   function show(){
     const body=document.getElementById('kdYourCurrentPositionBody');
     if(!body)return;
@@ -2606,6 +2624,36 @@ init();
       const arr=Array.from(best.values()).filter(r=>r.grade===mine.grade).sort((a,b)=>b.lv-a.lv||time(a)-time(b)||String(a.recordedAt).localeCompare(String(b.recordedAt)));
       const i=arr.findIndex(r=>String(r.studentId)===String(s.studentId));
       body.innerHTML=`${mine.grade}年生　｜　<b>LV${mine.lv}</b>　｜　現在 <b>${i+1}位</b><br><span class="sub">${time(mine).toFixed(3)}秒</span>`;
+      return;
+    }
+
+    if(mode==='streak' || mode==='practiceDays'){
+      const allRows=all().filter(r=>r.studentId);
+      const dayMap=new Map();
+      allRows.forEach(r=>{
+        const dt=new Date(r.recordedAt||0); if(Number.isNaN(dt.getTime()))return;
+        const day=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+        const id=String(r.studentId);
+        if(!dayMap.has(id))dayMap.set(id,new Map());
+        const dm=dayMap.get(id); dm.set(day,(dm.get(day)||0)+(Number(r.correctCount)||0));
+      });
+      const stats=[...dayMap.entries()].map(([id,dm])=>{
+        const q=[...dm.entries()].filter(x=>x[1]>=10).map(x=>x[0]).sort();
+        let streak=0,cur=0,prev=null;
+        q.forEach(day=>{const d=new Date(day+'T00:00:00');if(prev){const p=new Date(prev+'T00:00:00');cur=Math.round((d-p)/86400000)===1?cur+1:1;}else cur=1;streak=Math.max(streak,cur);prev=day;});
+        return {id,days:q.length,bestStreak:streak};
+      });
+      const me=stats.find(x=>String(x.id)===String(s.studentId)) || {days:0,bestStreak:0};
+      const base=mode==='streak'
+        ? `継続 <b>${me.days?'' : ''}</b>`
+        : `練習 <b>${me.days}日</b>`;
+      if(mode==='streak'){
+        // Current displayed position is the streak ranking value calculated above.
+        const currentText=body.textContent;
+        body.innerHTML=currentText + `<br><span class="sub">🏆 過去最高継続：<b>${me.bestStreak}日</b></span>`;
+      }else{
+        body.innerHTML=body.innerHTML + `<br><span class="sub">📅 過去累計練習日：<b>${me.days}日</b></span>`;
+      }
       return;
     }
 
@@ -2848,5 +2896,33 @@ init();
   window.kdRenderContinuityV156=render; window.kdRenderContinuityHomeV156=renderHome;
 })();
 </script>
+
+<script id="kd-ranking-tab-authoritative-v252">
+(function(){
+  function forceRender(){
+    const active=document.querySelector('[data-kd-rank-mode].active');
+    const mode=active?.dataset?.kdRankMode||'time';
+    const body=document.getElementById('kdRankingBody');
+    if(body) body.innerHTML='';
+    try{
+      if(window.kdSetOnlineRankingMode){
+        window.kdSetOnlineRankingMode(mode);
+      }else if(window.kdRenderOnlineRankingV236){
+        window.kdRenderOnlineRankingV236();
+      }
+    }catch(err){
+      if(body) body.innerHTML='<div class="kd-rank-note">ランキングを表示できませんでした。もう一度お試しください。</div>';
+      console.error(err);
+    }
+    if(window.kdRenderYourCurrentPositionV244) setTimeout(window.kdRenderYourCurrentPositionV244,0);
+  }
+  document.addEventListener('click',function(e){
+    const b=e.target?.closest?.('[data-kd-rank-mode]');
+    if(!b)return;
+    setTimeout(forceRender,0);
+  },true);
+})();
+</script>
+
 </body>
 </html>
